@@ -10,13 +10,15 @@ public partial class MainWindow : Window
 {
     private readonly IApplicationInfo _appInfo;
     private readonly ICurrentUserService _currentUser;
+    private readonly IServiceProvider _services;
     private Button? _activeNavButton;
     private bool _loggingOut;
 
-    public MainWindow(IApplicationInfo appInfo, ICurrentUserService currentUser)
+    public MainWindow(IApplicationInfo appInfo, ICurrentUserService currentUser, IServiceProvider services)
     {
         _appInfo = appInfo;
         _currentUser = currentUser;
+        _services = services;
         InitializeComponent();
 
         Title = $"{_appInfo.ShortName} — {_appInfo.ApplicationName}";
@@ -65,6 +67,8 @@ public partial class MainWindow : Window
                 ContentArea.Content = new AboutView(_appInfo);
                 break;
             case "Targets":
+                ContentArea.Content = new TargetsView(_services);
+                break;
             case "Scans":
             case "Hosts":
             case "Services":
@@ -92,7 +96,7 @@ public partial class MainWindow : Window
 
     private void ShowDashboard()
     {
-        ContentArea.Content = new DashboardView();
+        ContentArea.Content = new DashboardView(_services);
     }
 
     private static UIElement CreatePlaceholder(string module)
@@ -105,7 +109,7 @@ public partial class MainWindow : Window
         });
         panel.Children.Add(new TextBlock
         {
-            Text = $"The {module} module will be implemented in a later phase.\n\nThis is the Phase 1–2 foundation shell.",
+            Text = $"The {module} module will be implemented in a later phase.\n\nPhase 3 delivers Target Management. Scanning and related modules remain future work.",
             Foreground = (System.Windows.Media.Brush)System.Windows.Application.Current.FindResource("BrushTextSecondary"),
             FontSize = 14,
             TextWrapping = TextWrapping.Wrap,
@@ -118,7 +122,6 @@ public partial class MainWindow : Window
     {
         if (!_loggingOut && _currentUser.IsAuthenticated)
         {
-            // User closed window without explicit logout — still clear session
             Log.Information("Main window closed by user {Username}", _currentUser.Username);
             _currentUser.Clear();
         }
