@@ -22,7 +22,7 @@ public class ScanServiceTests
         scans ??= new InMemoryScanRepository();
         profiles ??= new InMemoryScanProfileRepository(_profileId);
         targets ??= CreateDefaultTargets();
-        return new ScanService(scans, profiles, targets, NullLogger<ScanService>.Instance);
+        return new ScanService(scans, profiles, targets, new NoOpExecutionService(), NullLogger<ScanService>.Instance);
     }
 
     private InMemoryTargetService CreateDefaultTargets()
@@ -243,9 +243,9 @@ public class ScanServiceTests
         }
         public Task<Scan?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) => Task.FromResult(_items.FirstOrDefault(s => s.Id == id));
         public Task<int> CountAsync(CancellationToken cancellationToken = default) => Task.FromResult(_items.Count);
-        public Task<int> CountActiveAsync(CancellationToken cancellationToken = default) => Task.FromResult(_items.Count(s => s.Status is ScanStatus.Queued or ScanStatus.Running));
         public Task<Scan> AddAsync(Scan scan, CancellationToken cancellationToken = default) { if (scan.Id == Guid.Empty) scan.Id = Guid.NewGuid(); _items.Add(scan); return Task.FromResult(scan); }
         public Task UpdateAsync(Scan scan, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<int> CountActiveAsync(CancellationToken cancellationToken = default) => Task.FromResult(_items.Count(s => s.Status is ScanStatus.Queued or ScanStatus.Running));
     }
 
     private sealed class InMemoryScanProfileRepository : IScanProfileRepository
@@ -277,5 +277,14 @@ public class ScanServiceTests
         public Task<TargetServiceResult> ArchiveAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<TargetServiceResult> SetAuthorizationAsync(Guid id, bool confirmed, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public bool IsEligibleForScan(Target target) => target is not null && target.Status == TargetStatus.Active && target.AuthorizationConfirmed;
+    }
+
+    private sealed class NoOpExecutionService : IScanExecutionService
+    {
+        public Task<NmapAvailabilityResult> CheckNmapAvailabilityAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(NmapAvailabilityResult.Unavailable("not used in these tests"));
+
+        public Task<ScanExecutionResult> StartAsync(Guid scanId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(ScanExecutionResult.Failure("not used in these tests"));
     }
 }
