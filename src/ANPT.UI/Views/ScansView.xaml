@@ -58,7 +58,8 @@
             <DataGrid x:Name="ScansGrid" AutoGenerateColumns="False" IsReadOnly="True"
                       SelectionMode="Single" HeadersVisibility="Column"
                       CanUserAddRows="False" CanUserDeleteRows="False"
-                      GridLinesVisibility="Horizontal" RowHeaderWidth="0">
+                      GridLinesVisibility="Horizontal" RowHeaderWidth="0"
+                      MouseDoubleClick="ScansGrid_MouseDoubleClick">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" MinWidth="120"/>
                     <DataGridTextColumn Header="Target" Binding="{Binding Target.Name}" Width="140"/>
@@ -69,9 +70,10 @@
                     <DataGridTextColumn Header="Completed" Binding="{Binding CompletedAt, StringFormat=g}" Width="140"/>
                 </DataGrid.Columns>
             </DataGrid>
-            <TextBlock x:Name="EmptyStateText" Text="No scans have been created yet."
-                       HorizontalAlignment="Center" VerticalAlignment="Center"
-                       Opacity="0.6" Visibility="Collapsed"/>
+            <TextBlock x:Name="EmptyStateText"
+                       Text="No scans have been created yet.&#x0a;&#x0a;Create a scan against an authorized Active target to begin managing assessments."
+                       HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
+                       Opacity="0.6" Visibility="Collapsed" TextWrapping="Wrap" Margin="40"/>
         </Grid>
     </Grid>
 </UserControl>

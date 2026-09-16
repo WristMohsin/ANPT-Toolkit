@@ -13,13 +13,20 @@ public partial class ScansView : UserControl
 {
     private readonly IServiceProvider _services;
     private bool _isLoading;
+    private bool _isCancelling;
     private System.Windows.Threading.DispatcherTimer? _searchDebounce;
+    private int _loadGeneration;
 
     public ScansView(IServiceProvider services)
     {
         _services = services;
         InitializeComponent();
         Loaded += async (_, _) => await LoadScansAsync();
+        Unloaded += (_, _) =>
+        {
+            _searchDebounce?.Stop();
+            _searchDebounce = null;
+        };
         ScansGrid.SelectionChanged += ScansGrid_SelectionChanged;
     }
 
@@ -28,21 +35,28 @@ public partial class ScansView : UserControl
         var selected = ScansGrid.SelectedItem as Scan;
         DetailsButton.IsEnabled = selected is not null;
         CancelScanButton.IsEnabled = selected is not null &&
+            !_isCancelling &&
             (selected.Status == ScanStatus.Queued || selected.Status == ScanStatus.Running);
     }
 
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
     {
-        _searchDebounce?.Stop();
-        _searchDebounce = new System.Windows.Threading.DispatcherTimer
+        if (_searchDebounce is null)
         {
-            Interval = TimeSpan.FromMilliseconds(300)
-        };
-        _searchDebounce.Tick += async (_, _) =>
+            _searchDebounce = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(300)
+            };
+            _searchDebounce.Tick += async (_, _) =>
+            {
+                _searchDebounce?.Stop();
+                await LoadScansAsync();
+            };
+        }
+        else
         {
             _searchDebounce.Stop();
-            await LoadScansAsync();
-        };
+        }
         _searchDebounce.Start();
     }
 
@@ -65,7 +79,11 @@ public partial class ScansView : UserControl
             await LoadScansAsync();
     }
 
-    private void DetailsButton_Click(object sender, RoutedEventArgs e)
+    private void DetailsButton_Click(object sender, RoutedEventArgs e) => OpenDetails();
+
+    private void ScansGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e) => OpenDetails();
+
+    private void OpenDetails()
     {
         if (ScansGrid.SelectedItem is not Scan selected) return;
         var window = new ScanDetailsWindow(_services, selected.Id)
@@ -77,6 +95,7 @@ public partial class ScansView : UserControl
 
     private async void CancelScanButton_Click(object sender, RoutedEventArgs e)
     {
+        if (_isCancelling) return;
         if (ScansGrid.SelectedItem is not Scan selected) return;
 
         var confirm = MessageBox.Show(
@@ -87,6 +106,8 @@ public partial class ScansView : UserControl
 
         if (confirm != MessageBoxResult.Yes) return;
 
+        _isCancelling = true;
+        CancelScanButton.IsEnabled = false;
         try
         {
             using var scope = _services.CreateScope();
@@ -106,12 +127,19 @@ public partial class ScansView : UserControl
             Log.Error(ex, "Cancel scan UI error");
             MessageBox.Show("Unable to cancel scan.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+        finally
+        {
+            _isCancelling = false;
+            ScansGrid_SelectionChanged(ScansGrid, new SelectionChangedEventArgs(
+                DataGrid.SelectionChangedEvent, new List<object>(), new List<object>()));
+        }
     }
 
     private async Task LoadScansAsync()
     {
         if (_isLoading) return;
         _isLoading = true;
+        var generation = ++_loadGeneration;
         try
         {
             ScanStatus? statusFilter = null;
@@ -128,6 +156,8 @@ public partial class ScansView : UserControl
             var service = scope.ServiceProvider.GetRequiredService<IScanService>();
             var list = await service.SearchAsync(search, statusFilter, null, null);
 
+            if (generation != _loadGeneration) return;
+
             ScansGrid.ItemsSource = list;
             EmptyStateText.Visibility = list.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             ScansGrid.Visibility = list.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
@@ -135,14 +165,20 @@ public partial class ScansView : UserControl
         catch (Exception ex)
         {
             Log.Error(ex, "Failed to load scans");
-            MessageBox.Show("Unable to load scans. Please try again.", "Error",
-                MessageBoxButton.OK, MessageBoxImage.Error);
+            if (generation == _loadGeneration)
+            {
+                MessageBox.Show("Unable to load scans. Please try again.", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
         finally
         {
-            _isLoading = false;
-            ScansGrid_SelectionChanged(ScansGrid, new SelectionChangedEventArgs(
-                DataGrid.SelectionChangedEvent, new List<object>(), new List<object>()));
+            if (generation == _loadGeneration)
+            {
+                _isLoading = false;
+                ScansGrid_SelectionChanged(ScansGrid, new SelectionChangedEventArgs(
+                    DataGrid.SelectionChangedEvent, new List<object>(), new List<object>()));
+            }
         }
     }
 }
