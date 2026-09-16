@@ -286,5 +286,7 @@ public class ScanServiceTests
 
         public Task<ScanExecutionResult> StartAsync(Guid scanId, CancellationToken cancellationToken = default) =>
             Task.FromResult(ScanExecutionResult.Failure("not used in these tests"));
+
+        public bool RequestCancel(Guid scanId) => false;
     }
 }
