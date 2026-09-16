@@ -15,20 +15,17 @@ ANPT Toolkit is a Senior Design / Final Year Project that provides a modern, pro
 > **Security Notice**  
 > This toolkit is intended **only** for systems you own or have explicit written authorization to assess. Unauthorized scanning is illegal.
 
-## Current Status — Phase 4 (Scan Management Foundation)
+## Current Status — Phase 5A (Safe Nmap Execution Foundation)
 
 | Component | Status |
 |-----------|--------|
 | Phase 1 foundation | Done |
 | Phase 2 authentication | Done |
 | Phase 3 target management | Done |
-| Scan list / search / filter | Done |
-| Create scan (target + profile) | Done |
-| Authorization enforced on create | Done |
-| Cancel queued/running scans | Done |
-| Scan details view | Done |
-| Dashboard Active Scans count | Done |
-| Scan unit tests | Done |
+| Phase 4 scan management | Done |
+| Safe Nmap process runner | Done (5A) |
+| Authorization re-check before start | Done (5A) |
+| Allow-listed Nmap arguments | Done (5A) |
 
 ### Targets (Phase 3)
 
@@ -40,10 +37,17 @@ ANPT Toolkit is a Senior Design / Final Year Project that provides a modern, pro
 - Create scans against **eligible** targets only (Active + AuthorizationConfirmed).
 - Select a built-in **ScanProfile**.
 - Scans are created as **Queued**.
-- Cancel is supported for Queued / Running at the management layer only.
-- **No network execution, Nmap, host discovery, port scanning, or findings** in this phase.
+- Cancel is supported for Queued / Running at the management layer.
 
-**Out of scope (later phases):** Nmap / real scanning, hosts, services, findings, reports, profile editor, logs UI, settings UI.
+### Execution (Phase 5A)
+
+- Safe **Nmap process runner** (no shell, `ProcessStartInfo.ArgumentList` only).
+- **Authorization re-validated** immediately before start.
+- Allow-listed arguments from ScanProfile flags only (no raw user switches).
+- Queued → Running → Completed/Failed/Cancelled based on real process outcome.
+- **No** XML host/service parsing, findings, vulnerability scanning, or reports yet.
+
+**Out of scope (later phases):** Nmap XML parsing, hosts/services persistence, findings, CVE matching, reports, profile editor, logs UI, settings UI.
 
 ## Technology Stack
 
@@ -53,6 +57,7 @@ ANPT Toolkit is a Senior Design / Final Year Project that provides a modern, pro
 
 - Windows 10 / Windows 11
 - .NET 8 SDK (for development)
+- Nmap installed on PATH or at a standard location (optional `Config/nmap.path` file)
 
 ## Installation & Running
 
@@ -73,6 +78,8 @@ Or download the **ANPT-Toolkit-Windows** artifact from the latest successful Act
 ```bash
 dotnet test
 ```
+
+Unit tests do **not** require Nmap to be installed (process runner is faked).
 
 ## License
 
