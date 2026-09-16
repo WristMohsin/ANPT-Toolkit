@@ -68,7 +68,7 @@ public partial class ScansView : UserControl
     private void DetailsButton_Click(object sender, RoutedEventArgs e)
     {
         if (ScansGrid.SelectedItem is not Scan selected) return;
-        var window = new ScanDetailsWindow(selected)
+        var window = new ScanDetailsWindow(_services, selected.Id)
         {
             Owner = Window.GetWindow(this)
         };
