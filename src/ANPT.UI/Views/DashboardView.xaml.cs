@@ -22,14 +22,18 @@ public partial class DashboardView : UserControl
         try
         {
             using var scope = _services.CreateScope();
-            var targetService = scope.ServiceProvider.GetRequiredService<ITargetService>();
-            var count = await targetService.GetTotalCountAsync();
-            TotalTargetsValue.Text = count.ToString();
+            var sp = scope.ServiceProvider;
+            var targetService = sp.GetRequiredService<ITargetService>();
+            var scanService = sp.GetRequiredService<IScanService>();
+
+            TotalTargetsValue.Text = (await targetService.GetTotalCountAsync()).ToString();
+            ActiveScansValue.Text = (await scanService.GetActiveCountAsync()).ToString();
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "Failed to load dashboard target count");
+            Log.Warning(ex, "Failed to load dashboard metrics");
             TotalTargetsValue.Text = "—";
+            ActiveScansValue.Text = "—";
         }
     }
 }
