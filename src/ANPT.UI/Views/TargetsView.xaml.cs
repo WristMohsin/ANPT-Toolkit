@@ -23,6 +23,11 @@ public partial class TargetsView : UserControl
         InitializeComponent();
         Loaded += async (_, _) => await LoadTargetsAsync();
         TargetsGrid.SelectionChanged += TargetsGrid_SelectionChanged;
+        Unloaded += (_, _) =>
+        {
+            _searchDebounce?.Stop();
+            _searchDebounce = null;
+        };
     }
 
     private void TargetsGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -32,18 +37,24 @@ public partial class TargetsView : UserControl
         ArchiveButton.IsEnabled = hasSelection && TargetsGrid.SelectedItem is Target t && t.Status != TargetStatus.Archived;
     }
 
-    private async void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
+    private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
     {
-        _searchDebounce?.Stop();
-        _searchDebounce = new System.Windows.Threading.DispatcherTimer
+        if (_searchDebounce is null)
         {
-            Interval = TimeSpan.FromMilliseconds(300)
-        };
-        _searchDebounce.Tick += async (_, _) =>
+            _searchDebounce = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(300)
+            };
+            _searchDebounce.Tick += async (_, _) =>
+            {
+                _searchDebounce?.Stop();
+                await LoadTargetsAsync();
+            };
+        }
+        else
         {
             _searchDebounce.Stop();
-            await LoadTargetsAsync();
-        };
+        }
         _searchDebounce.Start();
     }
 
