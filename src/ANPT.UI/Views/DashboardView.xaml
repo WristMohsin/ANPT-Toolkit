@@ -13,7 +13,7 @@
             <UniformGrid Columns="4" Margin="0,0,0,8">
                 <Border Style="{StaticResource CardStyle}">
                     <StackPanel>
-                        <TextBlock Text="0" Style="{StaticResource MetricValueStyle}"/>
+                        <TextBlock x:Name="TotalTargetsValue" Text="…" Style="{StaticResource MetricValueStyle}"/>
                         <TextBlock Text="Total Targets" Style="{StaticResource MetricLabelStyle}"/>
                     </StackPanel>
                 </Border>
