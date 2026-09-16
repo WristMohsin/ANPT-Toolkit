@@ -19,8 +19,8 @@
                 </Border>
                 <Border Style="{StaticResource CardStyle}">
                     <StackPanel>
-                        <TextBlock Text="0" Style="{StaticResource MetricValueStyle}"/>
-                        <TextBlock Text="Active Hosts" Style="{StaticResource MetricLabelStyle}"/>
+                        <TextBlock x:Name="ActiveScansValue" Text="…" Style="{StaticResource MetricValueStyle}"/>
+                        <TextBlock Text="Active Scans" Style="{StaticResource MetricLabelStyle}"/>
                     </StackPanel>
                 </Border>
                 <Border Style="{StaticResource CardStyle}">
