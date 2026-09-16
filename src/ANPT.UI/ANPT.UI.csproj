@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <StartupObject>ANPT.UI.App</StartupObject>
+    <AssemblyName>ANPT-Toolkit</AssemblyName>
+    <RootNamespace>ANPT.UI</RootNamespace>
+    <Version>1.0.0</Version>
+    <Authors>ANPT Toolkit Team</Authors>
+    <Product>Automated Network Penetration Testing Toolkit</Product>
+    <Description>Professional Windows desktop automated network security assessment toolkit</Description>
+    <Copyright>Copyright (c) 2026</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
+    <PackageReference Include="Serilog" Version="4.0.2" />
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ANPT.Application\ANPT.Application.csproj" />
+    <ProjectReference Include="..\ANPT.Infrastructure\ANPT.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>
