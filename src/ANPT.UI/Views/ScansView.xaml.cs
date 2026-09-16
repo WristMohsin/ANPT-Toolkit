@@ -14,6 +14,7 @@ public partial class ScansView : UserControl
     private readonly IServiceProvider _services;
     private bool _isLoading;
     private bool _isCancelling;
+    private bool _isStarting;
     private System.Windows.Threading.DispatcherTimer? _searchDebounce;
     private int _loadGeneration;
 
@@ -34,6 +35,9 @@ public partial class ScansView : UserControl
     {
         var selected = ScansGrid.SelectedItem as Scan;
         DetailsButton.IsEnabled = selected is not null;
+        StartScanButton.IsEnabled = selected is not null &&
+            !_isStarting &&
+            selected.Status == ScanStatus.Queued;
         CancelScanButton.IsEnabled = selected is not null &&
             !_isCancelling &&
             (selected.Status == ScanStatus.Queued || selected.Status == ScanStatus.Running);
@@ -93,13 +97,59 @@ public partial class ScansView : UserControl
         window.ShowDialog();
     }
 
+    private async void StartScanButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_isStarting) return;
+        if (ScansGrid.SelectedItem is not Scan selected) return;
+        if (selected.Status != ScanStatus.Queued) return;
+
+        var confirm = MessageBox.Show(
+            $"Start scan '{selected.Name}'?\n\nNmap will run against the authorized target. Ensure you have written permission.",
+            "Start Scan",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+
+        if (confirm != MessageBoxResult.Yes) return;
+
+        _isStarting = true;
+        StartScanButton.IsEnabled = false;
+        try
+        {
+            using var scope = _services.CreateScope();
+            var service = scope.ServiceProvider.GetRequiredService<IScanService>();
+            var result = await service.StartAsync(selected.Id);
+            if (!result.Succeeded)
+            {
+                MessageBox.Show(result.ErrorMessage ?? "Unable to start scan.", "Start Scan",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            else
+            {
+                Log.Information("Scan started from UI: {Id} FinalStatus={Status}",
+                    selected.Id, result.Scan?.Status);
+            }
+            await LoadScansAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Start scan UI error");
+            MessageBox.Show("Unable to start scan.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            _isStarting = false;
+            ScansGrid_SelectionChanged(ScansGrid, new SelectionChangedEventArgs(
+                DataGrid.SelectionChangedEvent, new List<object>(), new List<object>()));
+        }
+    }
+
     private async void CancelScanButton_Click(object sender, RoutedEventArgs e)
     {
         if (_isCancelling) return;
         if (ScansGrid.SelectedItem is not Scan selected) return;
 
         var confirm = MessageBox.Show(
-            $"Cancel scan '{selected.Name}'?\n\nThis updates management status only. There is no running network process in this phase.",
+            $"Cancel scan '{selected.Name}'?\n\nIf the scan is Running, the Nmap process will be terminated.",
             "Cancel Scan",
             MessageBoxButton.YesNo,
             MessageBoxImage.Question);
