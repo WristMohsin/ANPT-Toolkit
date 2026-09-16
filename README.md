@@ -15,7 +15,7 @@ ANPT Toolkit is a Senior Design / Final Year Project that provides a modern, pro
 > **Security Notice**  
 > This toolkit is intended **only** for systems you own or have explicit written authorization to assess. Unauthorized scanning is illegal.
 
-## Current Status — Phase 5B (Real Nmap Scan Execution & Lifecycle)
+## Current Status — Phase 5C (Nmap XML Parsing Foundation)
 
 | Component | Status |
 |-----------|--------|
@@ -25,7 +25,10 @@ ANPT Toolkit is a Senior Design / Final Year Project that provides a modern, pro
 | Phase 4 scan management | Done |
 | Phase 5A safe Nmap runner | Done |
 | Phase 5B real execution & lifecycle | Done |
-| XML parsing / hosts / findings | Not started |
+| Phase 5C Nmap XML parsing foundation | Done |
+| Host/Port/Service persistence | Not started |
+| Findings / vulnerabilities / CVE | Not started |
+| Reporting | Not started |
 
 ### Targets (Phase 3)
 
@@ -50,7 +53,15 @@ ANPT Toolkit is a Senior Design / Final Year Project that provides a modern, pro
 - Controlled unique XML output under application `ScanOutput/` directory.
 - Process tracking prevents duplicate starts and cross-scan cancellation.
 
-**Still NOT implemented:** Nmap XML parsing, Hosts/Ports/Services persistence, Findings, Vulnerability Analysis, CVE matching, Reporting, Scheduling.
+### Parsing (Phase 5C)
+
+- Secure **Nmap XML parser** (`INmapXmlParser`) using `System.Xml.Linq` with DTD/external entity resolution **disabled**.
+- Typed in-memory models: scan metadata, hosts, addresses, hostnames, ports, services, runstats.
+- Controlled **XML file reader** (`INmapXmlResultReader`) restricted to the application `ScanOutput/` directory.
+- Unit tests cover valid fixtures, missing optional fields, malformed XML, XXE/DTD attempts, and path traversal rejection.
+- **No** database persistence of hosts/ports/services in this phase.
+
+**Still NOT implemented:** Hosts/Ports/Services persistence, Findings, Vulnerability Analysis, CVE matching, Reporting, Scheduling.
 
 ## Technology Stack
 
