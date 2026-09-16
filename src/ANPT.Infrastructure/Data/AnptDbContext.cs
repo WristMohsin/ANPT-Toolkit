@@ -52,13 +52,15 @@ public class AnptDbContext : DbContext
         modelBuilder.Entity<Scan>(e =>
         {
             e.HasKey(x => x.Id);
-            e.Property(x => x.Name).HasMaxLength(200);
+            e.Property(x => x.Name).HasMaxLength(200).IsRequired();
             e.Property(x => x.StatusMessage).HasMaxLength(500);
             e.Property(x => x.ErrorMessage).HasMaxLength(2000);
+            e.Property(x => x.CreatedBy).HasMaxLength(100);
             e.HasOne(x => x.Target).WithMany(t => t.Scans).HasForeignKey(x => x.TargetId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(x => x.ScanProfile).WithMany().HasForeignKey(x => x.ScanProfileId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => x.Status);
             e.HasIndex(x => x.CreatedAt);
+            e.HasIndex(x => x.TargetId);
         });
 
         modelBuilder.Entity<Host>(e =>
