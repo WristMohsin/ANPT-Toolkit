@@ -56,6 +56,7 @@ public class AnptDbContext : DbContext
             e.Property(x => x.StatusMessage).HasMaxLength(500);
             e.Property(x => x.ErrorMessage).HasMaxLength(2000);
             e.Property(x => x.CreatedBy).HasMaxLength(100);
+            e.Property(x => x.OutputFilePath).HasMaxLength(500);
             e.HasOne(x => x.Target).WithMany(t => t.Scans).HasForeignKey(x => x.TargetId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(x => x.ScanProfile).WithMany().HasForeignKey(x => x.ScanProfileId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => x.Status);
