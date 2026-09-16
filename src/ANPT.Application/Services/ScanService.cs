@@ -92,7 +92,9 @@ public class ScanService : IScanService
             CurrentStage = ScanStage.Initializing,
             ProgressPercent = 0,
             StatusMessage = "Queued — awaiting scan engine (not implemented in this phase).",
-            CreatedBy = string.IsNullOrWhiteSpace(createdBy) ? null : createdBy.Trim()
+            CreatedBy = string.IsNullOrWhiteSpace(createdBy)
+                ? null
+                : (createdBy.Trim().Length > 100 ? createdBy.Trim()[..100] : createdBy.Trim())
         };
 
         try
