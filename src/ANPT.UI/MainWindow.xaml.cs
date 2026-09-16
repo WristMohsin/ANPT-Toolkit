@@ -101,12 +101,12 @@ public partial class MainWindow : Window
         panel.Children.Add(new TextBlock
         {
             Text = module,
-            Style = (Style)Application.Current.FindResource("SectionHeaderStyle")
+            Style = (Style)System.Windows.Application.Current.FindResource("SectionHeaderStyle")
         });
         panel.Children.Add(new TextBlock
         {
             Text = $"The {module} module will be implemented in a later phase.\n\nThis is the Phase 1–2 foundation shell.",
-            Foreground = (System.Windows.Media.Brush)Application.Current.FindResource("BrushTextSecondary"),
+            Foreground = (System.Windows.Media.Brush)System.Windows.Application.Current.FindResource("BrushTextSecondary"),
             FontSize = 14,
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 8, 0, 0)
@@ -118,6 +118,7 @@ public partial class MainWindow : Window
     {
         if (!_loggingOut && _currentUser.IsAuthenticated)
         {
+            // User closed window without explicit logout — still clear session
             Log.Information("Main window closed by user {Username}", _currentUser.Username);
             _currentUser.Clear();
         }
