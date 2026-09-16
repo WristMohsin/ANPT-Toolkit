@@ -8,9 +8,15 @@ public interface IScanExecutionService
     Task<NmapAvailabilityResult> CheckNmapAvailabilityAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Starts a Queued scan: re-checks eligibility, marks Running only after process start succeeds.
+    /// Starts a Queued scan: re-checks eligibility, marks Running, runs Nmap, then Finalizes status.
     /// </summary>
     Task<ScanExecutionResult> StartAsync(Guid scanId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Requests cancellation of an in-flight Nmap process for a Running scan.
+    /// Returns true if a process was registered and cancel was signalled.
+    /// </summary>
+    bool RequestCancel(Guid scanId);
 }
 
 public sealed class ScanExecutionResult

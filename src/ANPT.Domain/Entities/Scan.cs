@@ -20,6 +20,12 @@ public class Scan : BaseEntity
     public string? ErrorMessage { get; set; }
     public string? CreatedBy { get; set; }
 
+    /// <summary>
+    /// Absolute path to the Nmap XML output artifact under the controlled ScanOutput directory.
+    /// Set when execution starts; retained for later parsing (Phase 5C). Not parsed in Phase 5B.
+    /// </summary>
+    public string? OutputFilePath { get; set; }
+
     public ICollection<Host> Hosts { get; set; } = new List<Host>();
     public ICollection<Finding> Findings { get; set; } = new List<Finding>();
 }

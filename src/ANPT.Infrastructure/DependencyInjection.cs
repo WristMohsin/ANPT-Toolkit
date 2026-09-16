@@ -25,6 +25,8 @@ public static class DependencyInjection
         services.AddScoped<IScanProfileRepository, ScanProfileRepository>();
         services.AddScoped<DatabaseInitializer>();
         services.AddSingleton<INmapProcessRunner, NmapProcessRunner>();
+        services.AddSingleton<IScanProcessTracker, ScanProcessTracker>();
+        services.AddSingleton<IScanOutputPathService, ScanOutputPathService>();
 
         return services;
     }
