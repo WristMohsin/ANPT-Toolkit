@@ -94,7 +94,7 @@ public class ScanService : IScanService
             Status = ScanStatus.Queued,
             CurrentStage = ScanStage.Initializing,
             ProgressPercent = 0,
-            StatusMessage = "Queued — awaiting scan engine (not implemented in this phase).",
+            StatusMessage = "Queued — ready to start.",
             CreatedBy = string.IsNullOrWhiteSpace(createdBy)
                 ? null
                 : (createdBy.Trim().Length > 100 ? createdBy.Trim()[..100] : createdBy.Trim())
@@ -128,6 +128,36 @@ public class ScanService : IScanService
         if (existing.Status is not (ScanStatus.Queued or ScanStatus.Running))
             return ScanServiceResult.Failure("Only queued or running scans can be cancelled.");
 
+        // Running: signal process cancellation first so Nmap is terminated.
+        if (existing.Status == ScanStatus.Running)
+        {
+            var signalled = _execution.RequestCancel(id);
+            _logger.LogInformation(
+                "Cancel requested for Running scan {ScanId}. ProcessSignal={Signalled}",
+                id, signalled);
+
+            // If StartAsync is still awaiting, it will persist Cancelled when the process exits.
+            // Also update DB optimistically so UI reflects Cancelled promptly.
+            existing.Status = ScanStatus.Cancelled;
+            existing.CompletedAt = DateTime.UtcNow;
+            existing.StatusMessage = signalled
+                ? "Cancelled by operator (process termination requested)."
+                : "Cancelled by operator.";
+            existing.UpdatedAt = DateTime.UtcNow;
+
+            try
+            {
+                await _scans.UpdateAsync(existing, cancellationToken);
+                return ScanServiceResult.Success(existing);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to cancel running scan {ScanId}", id);
+                return ScanServiceResult.Failure("Unable to cancel scan. Please try again.");
+            }
+        }
+
+        // Queued: no process — just mark Cancelled.
         existing.Status = ScanStatus.Cancelled;
         existing.CompletedAt = DateTime.UtcNow;
         existing.StatusMessage = "Cancelled by operator.";
@@ -136,7 +166,7 @@ public class ScanService : IScanService
         try
         {
             await _scans.UpdateAsync(existing, cancellationToken);
-            _logger.LogInformation("Scan cancelled: {ScanId}", existing.Id);
+            _logger.LogInformation("Scan cancelled (Queued): {ScanId}", existing.Id);
             return ScanServiceResult.Success(existing);
         }
         catch (Exception ex)
