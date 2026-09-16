@@ -10,17 +10,20 @@ public class ScanService : IScanService
     private readonly IScanRepository _scans;
     private readonly IScanProfileRepository _profiles;
     private readonly ITargetService _targets;
+    private readonly IScanExecutionService _execution;
     private readonly ILogger<ScanService> _logger;
 
     public ScanService(
         IScanRepository scans,
         IScanProfileRepository profiles,
         ITargetService targets,
+        IScanExecutionService execution,
         ILogger<ScanService> logger)
     {
         _scans = scans;
         _profiles = profiles;
         _targets = targets;
+        _execution = execution;
         _logger = logger;
     }
 
@@ -141,5 +144,17 @@ public class ScanService : IScanService
             _logger.LogError(ex, "Failed to cancel scan {ScanId}", id);
             return ScanServiceResult.Failure("Unable to cancel scan. Please try again.");
         }
+    }
+
+    public async Task<ScanServiceResult> StartAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var result = await _execution.StartAsync(id, cancellationToken);
+        if (!result.Succeeded)
+            return ScanServiceResult.Failure(result.ErrorMessage ?? "Unable to start scan.");
+
+        var scan = await _scans.GetByIdAsync(id, cancellationToken);
+        return scan is null
+            ? ScanServiceResult.Failure("Scan not found after execution.")
+            : ScanServiceResult.Success(scan);
     }
 }
