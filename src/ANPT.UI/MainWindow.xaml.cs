@@ -70,6 +70,8 @@ public partial class MainWindow : Window
                 ContentArea.Content = new TargetsView(_services);
                 break;
             case "Scans":
+                ContentArea.Content = new ScansView(_services);
+                break;
             case "Hosts":
             case "Services":
             case "Findings":
@@ -109,7 +111,7 @@ public partial class MainWindow : Window
         });
         panel.Children.Add(new TextBlock
         {
-            Text = $"The {module} module will be implemented in a later phase.\n\nPhase 3 delivers Target Management. Scanning and related modules remain future work.",
+            Text = $"The {module} module will be implemented in a later phase.\n\nPhase 4 delivers Scan Management foundation. Network scan execution remains future work.",
             Foreground = (System.Windows.Media.Brush)System.Windows.Application.Current.FindResource("BrushTextSecondary"),
             FontSize = 14,
             TextWrapping = TextWrapping.Wrap,
