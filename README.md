@@ -15,47 +15,39 @@ ANPT Toolkit is a Senior Design / Final Year Project that provides a modern, pro
 > **Security Notice**  
 > This toolkit is intended **only** for systems you own or have explicit written authorization to assess. Unauthorized scanning is illegal.
 
-## Current Status — Phase 3 (Target Management)
+## Current Status — Phase 4 (Scan Management Foundation)
 
 | Component | Status |
 |-----------|--------|
 | Phase 1 foundation | Done |
 | Phase 2 authentication | Done |
-| Target list / search / filter | Done |
-| Create / edit targets | Done |
-| Archive targets | Done |
-| Authorization confirmation | Done |
-| Target repository + service | Done |
-| Dashboard real Target count | Done |
-| Target unit tests | Done |
-
-### Authentication (Phase 2)
-
-**Flow:** Application start → Login → Session → Main shell → Logout returns to Login.
-
-**Roles:** Admin, Analyst, Viewer
-
-**Password security:** PBKDF2-SHA256, unique salt, 210000 iterations, constant-time verify.
-
-**First-run bootstrap:** On empty DB creates admin account (`admin` / `Admin@ChangeMe1`). Change password after first login.
+| Phase 3 target management | Done |
+| Scan list / search / filter | Done |
+| Create scan (target + profile) | Done |
+| Authorization enforced on create | Done |
+| Cancel queued/running scans | Done |
+| Scan details view | Done |
+| Dashboard Active Scans count | Done |
+| Scan unit tests | Done |
 
 ### Targets (Phase 3)
 
 - Create, edit, search, and archive assessment targets.
-- **AuthorizationConfirmed** must be explicitly set by the operator before a target is eligible for future scans.
-- The application only records the user’s confirmation; it does not verify ownership or legal authorization.
-- Dashboard “Total Targets” is loaded from the database.
+- **AuthorizationConfirmed** must be set before a target is eligible for scans.
 
-**Out of scope (future phases):** actual network scanning, hosts, services, findings, reports, scan profiles UI, logs UI, settings UI.
+### Scans (Phase 4)
+
+- Create scans against **eligible** targets only (Active + AuthorizationConfirmed).
+- Select a built-in **ScanProfile**.
+- Scans are created as **Queued**.
+- Cancel is supported for Queued / Running at the management layer only.
+- **No network execution, Nmap, host discovery, port scanning, or findings** in this phase.
+
+**Out of scope (later phases):** Nmap / real scanning, hosts, services, findings, reports, profile editor, logs UI, settings UI.
 
 ## Technology Stack
 
-- C# / .NET 8
-- WPF
-- Entity Framework Core 8 + SQLite
-- Serilog
-- xUnit
-- GitHub Actions (windows-latest)
+- C# / .NET 8 · WPF · EF Core 8 + SQLite · Serilog · xUnit · GitHub Actions
 
 ## Requirements
 
@@ -72,7 +64,9 @@ dotnet build
 dotnet run --project src/ANPT.UI/ANPT.UI.csproj
 ```
 
-Or download the self-contained **ANPT-Toolkit-Windows** artifact from the latest successful GitHub Actions run.
+Or download the **ANPT-Toolkit-Windows** artifact from the latest successful Actions run.
+
+**Bootstrap login:** `admin` / `Admin@ChangeMe1` (change after first login).
 
 ## Running Tests
 
