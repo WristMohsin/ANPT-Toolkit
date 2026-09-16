@@ -19,6 +19,10 @@ public interface IScanService
     Task<IReadOnlyList<Target>> GetEligibleTargetsAsync(CancellationToken cancellationToken = default);
     Task<ScanServiceResult> CreateAsync(CreateScanRequest request, string? createdBy, CancellationToken cancellationToken = default);
     Task<ScanServiceResult> CancelAsync(Guid id, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Starts a Queued scan via the execution foundation (re-checks authorization, runs Nmap safely).
+    /// </summary>
+    Task<ScanServiceResult> StartAsync(Guid id, CancellationToken cancellationToken = default);
 }
 
 public sealed class CreateScanRequest
