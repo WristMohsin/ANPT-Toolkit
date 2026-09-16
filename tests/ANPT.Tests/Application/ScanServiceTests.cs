@@ -170,7 +170,7 @@ public class ScanServiceTests
         public Task<IReadOnlyList<Target>> SearchAsync(string? searchText, TargetStatus? statusFilter, CancellationToken cancellationToken = default) => GetAllAsync(cancellationToken);
         public Task<int> GetTotalCountAsync(CancellationToken cancellationToken = default) => Task.FromResult(_items.Count);
         public Task<TargetServiceResult> CreateAsync(CreateTargetRequest request, string? createdBy, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<TargetServiceResult> UpdateAsync(Guid id, UpdateTargetRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<TargetServiceResult> UpdateAsync(UpdateTargetRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<TargetServiceResult> ArchiveAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<TargetServiceResult> SetAuthorizationAsync(Guid id, bool confirmed, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public bool IsEligibleForScan(Target target) => target is not null && target.Status == TargetStatus.Active && target.AuthorizationConfirmed;
