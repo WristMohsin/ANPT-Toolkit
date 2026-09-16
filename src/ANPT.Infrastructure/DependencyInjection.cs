@@ -3,6 +3,7 @@ using ANPT.Infrastructure.Configuration;
 using ANPT.Infrastructure.Data;
 using ANPT.Infrastructure.Repositories;
 using ANPT.Infrastructure.Security;
+using ANPT.Infrastructure.Scanning;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -23,6 +24,7 @@ public static class DependencyInjection
         services.AddScoped<IScanRepository, ScanRepository>();
         services.AddScoped<IScanProfileRepository, ScanProfileRepository>();
         services.AddScoped<DatabaseInitializer>();
+        services.AddSingleton<INmapProcessRunner, NmapProcessRunner>();
 
         return services;
     }

@@ -13,6 +13,7 @@ public static class DependencyInjection
         services.AddScoped<IAuthenticationService, AuthenticationService>();
         services.AddScoped<ITargetService, TargetService>();
         services.AddScoped<IScanService, ScanService>();
+        services.AddScoped<IScanExecutionService, ScanExecutionService>();
         return services;
     }
 }
