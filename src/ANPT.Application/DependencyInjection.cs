@@ -14,6 +14,7 @@ public static class DependencyInjection
         services.AddScoped<ITargetService, TargetService>();
         services.AddScoped<IScanService, ScanService>();
         services.AddScoped<IScanExecutionService, ScanExecutionService>();
+        services.AddSingleton<INmapXmlParser, NmapXmlParser>();
         return services;
     }
 }
