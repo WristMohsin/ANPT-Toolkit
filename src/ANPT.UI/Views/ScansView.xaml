@@ -16,7 +16,7 @@
             </Grid.ColumnDefinitions>
             <StackPanel>
                 <TextBlock Text="Scan Management" Style="{StaticResource PageTitleStyle}"/>
-                <TextBlock Text="Create and manage assessment scans. Network execution is not implemented in this phase."
+                <TextBlock Text="Create, start, and cancel authorized Nmap scans. Results parsing is not implemented in this phase."
                            Style="{StaticResource PageSubtitleStyle}" Margin="0,4,0,0"/>
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
@@ -34,6 +34,7 @@
                 <ColumnDefinition Width="180"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <TextBox x:Name="SearchBox" Style="{StaticResource InputTextBoxStyle}"
                      Margin="0,0,8,0" TextChanged="SearchBox_TextChanged"
@@ -49,7 +50,9 @@
             </ComboBox>
             <Button x:Name="DetailsButton" Grid.Column="2" Content="Details" Style="{StaticResource SecondaryButtonStyle}"
                     Margin="0,0,8,0" IsEnabled="False" Click="DetailsButton_Click"/>
-            <Button x:Name="CancelScanButton" Grid.Column="3" Content="Cancel" Style="{StaticResource DangerButtonStyle}"
+            <Button x:Name="StartScanButton" Grid.Column="3" Content="Start" Style="{StaticResource PrimaryButtonStyle}"
+                    Margin="0,0,8,0" IsEnabled="False" Click="StartScanButton_Click"/>
+            <Button x:Name="CancelScanButton" Grid.Column="4" Content="Cancel" Style="{StaticResource DangerButtonStyle}"
                     IsEnabled="False" Click="CancelScanButton_Click"/>
         </Grid>
 
@@ -71,7 +74,7 @@
                 </DataGrid.Columns>
             </DataGrid>
             <TextBlock x:Name="EmptyStateText"
-                       Text="No scans have been created yet.&#x0a;&#x0a;Create a scan against an authorized Active target to begin managing assessments."
+                       Text="No scans have been created yet.&#x0a;&#x0a;Create a scan against an authorized Active target, then Start it to run Nmap."
                        HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
                        Opacity="0.6" Visibility="Collapsed" TextWrapping="Wrap" Margin="40"/>
         </Grid>
