@@ -1,0 +1,45 @@
+<UserControl x:Class="ANPT.UI.Views.AboutView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel MaxWidth="640">
+            <TextBlock Text="About" Style="{StaticResource SectionHeaderStyle}"/>
+
+            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,16">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                        <Border Background="{StaticResource BrushAccentPrimary}"
+                                CornerRadius="8" Padding="12,8" Margin="0,0,16,0">
+                            <TextBlock Text="ANPT" FontWeight="Bold" FontSize="20" Foreground="White"/>
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock x:Name="AppNameText" FontSize="18" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="VersionText" FontSize="13" Foreground="{StaticResource BrushTextSecondary}"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <TextBlock x:Name="DescriptionText"
+                               TextWrapping="Wrap"
+                               FontSize="13"
+                               Foreground="{StaticResource BrushTextSecondary}"
+                               Margin="0,0,0,16"/>
+
+                    <TextBlock Text="Technology Stack" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                    <TextBlock Text="• C# / .NET 8&#x0a;• WPF (Windows Presentation Foundation)&#x0a;• Entity Framework Core + SQLite&#x0a;• Serilog&#x0a;• Clean Architecture"
+                               FontSize="13"
+                               Foreground="{StaticResource BrushTextSecondary}"
+                               Margin="0,0,0,16"/>
+
+                    <TextBlock Text="Security Notice" FontWeight="SemiBold" Margin="0,0,0,8"
+                               Foreground="{StaticResource BrushAccentWarning}"/>
+                    <TextBlock Text="ANPT Toolkit is designed exclusively for authorized security assessments. Unauthorized scanning of systems you do not own or have explicit permission to test is illegal. Always obtain written authorization and limit activity to the approved scope."
+                               TextWrapping="Wrap"
+                               FontSize="13"
+                               Foreground="{StaticResource BrushTextSecondary}"/>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="Phase 1 — Foundation" FontSize="12" Foreground="{StaticResource BrushTextMuted}"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
