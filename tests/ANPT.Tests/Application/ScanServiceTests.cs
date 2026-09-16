@@ -129,6 +129,101 @@ public class ScanServiceTests
         Assert.Equal(_authTargetId, list[0].Id);
     }
 
+    [Fact]
+    public async Task Create_UnknownTargetId_Fails()
+    {
+        var result = await CreateService().CreateAsync(new CreateScanRequest
+        {
+            TargetId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+            ScanProfileId = _profileId
+        }, "admin");
+        Assert.False(result.Succeeded);
+        Assert.Contains("not found", result.ErrorMessage!, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Create_DisabledProfile_Fails()
+    {
+        var profiles = new InMemoryScanProfileRepository(_profileId, enabled: false);
+        var result = await CreateService(profiles: profiles).CreateAsync(new CreateScanRequest
+        {
+            TargetId = _authTargetId,
+            ScanProfileId = _profileId
+        }, "admin");
+        Assert.False(result.Succeeded);
+        Assert.Contains("disabled", result.ErrorMessage!, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Create_UnknownProfileId_Fails()
+    {
+        var result = await CreateService().CreateAsync(new CreateScanRequest
+        {
+            TargetId = _authTargetId,
+            ScanProfileId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
+        }, "admin");
+        Assert.False(result.Succeeded);
+        Assert.Contains("not found", result.ErrorMessage!, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Cancel_Running_Succeeds()
+    {
+        var scans = new InMemoryScanRepository();
+        var scan = new Scan
+        {
+            TargetId = _authTargetId,
+            ScanProfileId = _profileId,
+            Name = "run",
+            Status = ScanStatus.Running
+        };
+        await scans.AddAsync(scan);
+        var result = await CreateService(scans).CancelAsync(scan.Id);
+        Assert.True(result.Succeeded);
+        Assert.Equal(ScanStatus.Cancelled, result.Scan!.Status);
+        Assert.Equal(0, await CreateService(scans).GetActiveCountAsync());
+    }
+
+    [Fact]
+    public async Task Cancel_Failed_Fails()
+    {
+        var scans = new InMemoryScanRepository();
+        var scan = new Scan
+        {
+            TargetId = _authTargetId,
+            ScanProfileId = _profileId,
+            Name = "fail",
+            Status = ScanStatus.Failed
+        };
+        await scans.AddAsync(scan);
+        var result = await CreateService(scans).CancelAsync(scan.Id);
+        Assert.False(result.Succeeded);
+    }
+
+    [Fact]
+    public async Task Cancel_AlreadyCancelled_Fails()
+    {
+        var scans = new InMemoryScanRepository();
+        var scan = new Scan
+        {
+            TargetId = _authTargetId,
+            ScanProfileId = _profileId,
+            Name = "gone",
+            Status = ScanStatus.Cancelled
+        };
+        await scans.AddAsync(scan);
+        var result = await CreateService(scans).CancelAsync(scan.Id);
+        Assert.False(result.Succeeded);
+    }
+
+    [Fact]
+    public async Task Cancel_Missing_Fails()
+    {
+        var result = await CreateService().CancelAsync(Guid.NewGuid());
+        Assert.False(result.Succeeded);
+        Assert.Contains("not found", result.ErrorMessage!, StringComparison.OrdinalIgnoreCase);
+    }
+
     private sealed class InMemoryScanRepository : IScanRepository
     {
         private readonly List<Scan> _items = new();
@@ -156,9 +251,17 @@ public class ScanServiceTests
     private sealed class InMemoryScanProfileRepository : IScanProfileRepository
     {
         private readonly ScanProfile _profile;
-        public InMemoryScanProfileRepository(Guid id) { _profile = new ScanProfile { Id = id, Name = "Discovery", IsEnabled = true }; }
-        public Task<IReadOnlyList<ScanProfile>> GetEnabledAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<ScanProfile>>(new[] { _profile });
-        public Task<ScanProfile?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) => Task.FromResult(id == _profile.Id ? _profile : null);
+        public InMemoryScanProfileRepository(Guid id, bool enabled = true)
+        {
+            _profile = new ScanProfile { Id = id, Name = "Discovery", IsEnabled = enabled };
+        }
+        public Task<IReadOnlyList<ScanProfile>> GetEnabledAsync(CancellationToken cancellationToken = default)
+        {
+            IReadOnlyList<ScanProfile> list = _profile.IsEnabled ? new[] { _profile } : Array.Empty<ScanProfile>();
+            return Task.FromResult(list);
+        }
+        public Task<ScanProfile?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+            Task.FromResult(id == _profile.Id ? _profile : null);
     }
 
     private sealed class InMemoryTargetService : ITargetService
