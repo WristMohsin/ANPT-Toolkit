@@ -15,20 +15,21 @@ ANPT Toolkit is a Senior Design / Final Year Project that provides a modern, pro
 > **Security Notice**  
 > This toolkit is intended **only** for systems you own or have explicit written authorization to assess. Unauthorized scanning is illegal.
 
-## Current Status — Phase 2 (Authentication)
+## Current Status — Phase 3 (Target Management)
 
 | Component | Status |
 |-----------|--------|
 | Phase 1 foundation | Done |
-| Login window | Done |
-| Password hashing (PBKDF2-SHA256) | Done |
-| Authentication service | Done |
-| Session / current user | Done |
-| Roles (Admin / Analyst / Viewer) | Done |
-| Logout | Done |
-| Auth unit tests | Done |
+| Phase 2 authentication | Done |
+| Target list / search / filter | Done |
+| Create / edit targets | Done |
+| Archive targets | Done |
+| Authorization confirmation | Done |
+| Target repository + service | Done |
+| Dashboard real Target count | Done |
+| Target unit tests | Done |
 
-### Authentication
+### Authentication (Phase 2)
 
 **Flow:** Application start → Login → Session → Main shell → Logout returns to Login.
 
@@ -36,7 +37,16 @@ ANPT Toolkit is a Senior Design / Final Year Project that provides a modern, pro
 
 **Password security:** PBKDF2-SHA256, unique salt, 210000 iterations, constant-time verify.
 
-**First-run bootstrap:** On empty DB creates admin account. Change password after first login (see DatabaseInitializer).
+**First-run bootstrap:** On empty DB creates admin account (`admin` / `Admin@ChangeMe1`). Change password after first login.
+
+### Targets (Phase 3)
+
+- Create, edit, search, and archive assessment targets.
+- **AuthorizationConfirmed** must be explicitly set by the operator before a target is eligible for future scans.
+- The application only records the user’s confirmation; it does not verify ownership or legal authorization.
+- Dashboard “Total Targets” is loaded from the database.
+
+**Out of scope (future phases):** actual network scanning, hosts, services, findings, reports, scan profiles UI, logs UI, settings UI.
 
 ## Technology Stack
 
@@ -50,7 +60,7 @@ ANPT Toolkit is a Senior Design / Final Year Project that provides a modern, pro
 ## Requirements
 
 - Windows 10 / Windows 11
-- .NET 8 SDK
+- .NET 8 SDK (for development)
 
 ## Installation & Running
 
@@ -61,6 +71,8 @@ dotnet restore
 dotnet build
 dotnet run --project src/ANPT.UI/ANPT.UI.csproj
 ```
+
+Or download the self-contained **ANPT-Toolkit-Windows** artifact from the latest successful GitHub Actions run.
 
 ## Running Tests
 
