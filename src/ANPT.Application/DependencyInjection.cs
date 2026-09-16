@@ -12,6 +12,7 @@ public static class DependencyInjection
         services.AddSingleton<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IAuthenticationService, AuthenticationService>();
         services.AddScoped<ITargetService, TargetService>();
+        services.AddScoped<IScanService, ScanService>();
         return services;
     }
 }

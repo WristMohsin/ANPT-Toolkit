@@ -20,6 +20,8 @@ public static class DependencyInjection
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ITargetRepository, TargetRepository>();
+        services.AddScoped<IScanRepository, ScanRepository>();
+        services.AddScoped<IScanProfileRepository, ScanProfileRepository>();
         services.AddScoped<DatabaseInitializer>();
 
         return services;
