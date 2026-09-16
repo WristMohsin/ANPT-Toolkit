@@ -11,6 +11,7 @@ public static class DependencyInjection
         services.AddSingleton<IApplicationInfo, ApplicationInfo>();
         services.AddSingleton<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IAuthenticationService, AuthenticationService>();
+        services.AddScoped<ITargetService, TargetService>();
         return services;
     }
 }
