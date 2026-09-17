@@ -28,6 +28,7 @@ public static class DependencyInjection
         services.AddSingleton<IScanProcessTracker, ScanProcessTracker>();
         services.AddSingleton<IScanOutputPathService, ScanOutputPathService>();
         services.AddSingleton<INmapXmlResultReader, NmapXmlResultReader>();
+        services.AddScoped<INmapResultPersistenceService, NmapResultPersistenceService>();
 
         return services;
     }
