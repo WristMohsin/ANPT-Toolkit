@@ -14,6 +14,8 @@ public class AnptDbContext : DbContext
     public DbSet<ScanProfile> ScanProfiles => Set<ScanProfile>();
     public DbSet<Scan> Scans => Set<Scan>();
     public DbSet<Host> Hosts => Set<Host>();
+    public DbSet<HostAddress> HostAddresses => Set<HostAddress>();
+    public DbSet<HostHostname> HostHostnames => Set<HostHostname>();
     public DbSet<Service> Services => Set<Service>();
     public DbSet<Finding> Findings => Set<Finding>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
@@ -57,6 +59,11 @@ public class AnptDbContext : DbContext
             e.Property(x => x.ErrorMessage).HasMaxLength(2000);
             e.Property(x => x.CreatedBy).HasMaxLength(100);
             e.Property(x => x.OutputFilePath).HasMaxLength(500);
+            e.Property(x => x.NmapScanner).HasMaxLength(50);
+            e.Property(x => x.NmapVersion).HasMaxLength(50);
+            e.Property(x => x.NmapArguments).HasMaxLength(1000);
+            e.Property(x => x.NmapSummary).HasMaxLength(1000);
+            e.Property(x => x.NmapExitStatus).HasMaxLength(50);
             e.HasOne(x => x.Target).WithMany(t => t.Scans).HasForeignKey(x => x.TargetId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(x => x.ScanProfile).WithMany().HasForeignKey(x => x.ScanProfileId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => x.Status);
@@ -67,13 +74,36 @@ public class AnptDbContext : DbContext
         modelBuilder.Entity<Host>(e =>
         {
             e.HasKey(x => x.Id);
+            // Preferred address may be empty when host has only MAC / hostname (no IPv4/IPv6).
             e.Property(x => x.IpAddress).HasMaxLength(45).IsRequired();
             e.Property(x => x.Hostname).HasMaxLength(255);
             e.Property(x => x.MacAddress).HasMaxLength(50);
             e.Property(x => x.OsInfo).HasMaxLength(200);
             e.Property(x => x.Status).HasMaxLength(50);
+            e.Property(x => x.StateReason).HasMaxLength(100);
             e.HasOne(x => x.Scan).WithMany(s => s.Hosts).HasForeignKey(x => x.ScanId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => x.ScanId);
             e.HasIndex(x => x.IpAddress);
+        });
+
+        modelBuilder.Entity<HostAddress>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Address).HasMaxLength(100).IsRequired();
+            e.Property(x => x.AddressType).HasMaxLength(20).IsRequired();
+            e.Property(x => x.Vendor).HasMaxLength(200);
+            e.HasOne(x => x.Host).WithMany(h => h.Addresses).HasForeignKey(x => x.HostId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => x.HostId);
+            e.HasIndex(x => new { x.HostId, x.AddressType, x.Address });
+        });
+
+        modelBuilder.Entity<HostHostname>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).HasMaxLength(255).IsRequired();
+            e.Property(x => x.Type).HasMaxLength(50);
+            e.HasOne(x => x.Host).WithMany(h => h.Hostnames).HasForeignKey(x => x.HostId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => x.HostId);
         });
 
         modelBuilder.Entity<Service>(e =>
@@ -81,11 +111,15 @@ public class AnptDbContext : DbContext
             e.HasKey(x => x.Id);
             e.Property(x => x.Protocol).HasMaxLength(10);
             e.Property(x => x.State).HasMaxLength(20);
+            e.Property(x => x.StateReason).HasMaxLength(100);
             e.Property(x => x.ServiceName).HasMaxLength(100);
             e.Property(x => x.Product).HasMaxLength(200);
             e.Property(x => x.Version).HasMaxLength(100);
             e.Property(x => x.Banner).HasMaxLength(2000);
+            e.Property(x => x.Tunnel).HasMaxLength(50);
+            e.Property(x => x.DetectionMethod).HasMaxLength(50);
             e.HasOne(x => x.Host).WithMany(h => h.Services).HasForeignKey(x => x.HostId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => x.HostId);
             e.HasIndex(x => new { x.HostId, x.Port, x.Protocol });
         });
 
@@ -118,7 +152,6 @@ public class AnptDbContext : DbContext
             e.Property(x => x.Details).HasMaxLength(2000);
             e.Property(x => x.IpAddress).HasMaxLength(45);
             e.HasIndex(x => x.CreatedAt);
-            e.HasIndex(x => x.Action);
         });
 
         modelBuilder.Entity<AppSetting>(e =>
