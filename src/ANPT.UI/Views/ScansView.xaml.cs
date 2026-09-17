@@ -38,6 +38,8 @@ public partial class ScansView : UserControl
         StartScanButton.IsEnabled = selected is not null &&
             !_isStarting &&
             selected.Status == ScanStatus.Queued;
+        AnalyzeScanButton.IsEnabled = selected is not null &&
+            selected.Status == ScanStatus.Completed;
         CancelScanButton.IsEnabled = selected is not null &&
             !_isCancelling &&
             (selected.Status == ScanStatus.Queued || selected.Status == ScanStatus.Running);
@@ -75,10 +77,7 @@ public partial class ScansView : UserControl
 
     private async void NewScanButton_Click(object sender, RoutedEventArgs e)
     {
-        var window = new ScanCreateWindow(_services)
-        {
-            Owner = Window.GetWindow(this)
-        };
+        var window = new ScanCreateWindow(_services) { Owner = Window.GetWindow(this) };
         if (window.ShowDialog() == true)
             await LoadScansAsync();
     }
@@ -90,10 +89,7 @@ public partial class ScansView : UserControl
     private void OpenDetails()
     {
         if (ScansGrid.SelectedItem is not Scan selected) return;
-        var window = new ScanDetailsWindow(_services, selected.Id)
-        {
-            Owner = Window.GetWindow(this)
-        };
+        var window = new ScanDetailsWindow(selected) { Owner = Window.GetWindow(this) };
         window.ShowDialog();
     }
 
@@ -102,14 +98,6 @@ public partial class ScansView : UserControl
         if (_isStarting) return;
         if (ScansGrid.SelectedItem is not Scan selected) return;
         if (selected.Status != ScanStatus.Queued) return;
-
-        var confirm = MessageBox.Show(
-            $"Start scan '{selected.Name}'?\n\nNmap will run against the authorized target. Ensure you have written permission.",
-            "Start Scan",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
-
-        if (confirm != MessageBoxResult.Yes) return;
 
         _isStarting = true;
         StartScanButton.IsEnabled = false;
@@ -122,12 +110,9 @@ public partial class ScansView : UserControl
             {
                 MessageBox.Show(result.ErrorMessage ?? "Unable to start scan.", "Start Scan",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
             }
-            else
-            {
-                Log.Information("Scan started from UI: {Id} FinalStatus={Status}",
-                    selected.Id, result.Scan?.Status);
-            }
+            Log.Information("Scan started from UI: {Id}", selected.Id);
             await LoadScansAsync();
         }
         catch (Exception ex)
@@ -138,6 +123,48 @@ public partial class ScansView : UserControl
         finally
         {
             _isStarting = false;
+            ScansGrid_SelectionChanged(ScansGrid, new SelectionChangedEventArgs(
+                DataGrid.SelectionChangedEvent, new List<object>(), new List<object>()));
+        }
+    }
+
+    private async void AnalyzeScanButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (ScansGrid.SelectedItem is not Scan selected) return;
+        if (selected.Status != ScanStatus.Completed)
+        {
+            MessageBox.Show("Only completed scans can be analyzed.", "Analyze Scan",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        AnalyzeScanButton.IsEnabled = false;
+        try
+        {
+            using var scope = _services.CreateScope();
+            var analysis = scope.ServiceProvider.GetRequiredService<ISecurityAnalysisService>();
+            var result = await analysis.AnalyzeScanAsync(selected.Id);
+            if (!result.Succeeded)
+            {
+                MessageBox.Show(result.ErrorMessage ?? "Analysis failed.", "Analyze Scan",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            MessageBox.Show(
+                $"Analysis complete.\n\nRules executed: {result.RulesExecuted}\nFindings created: {result.FindingsCreated}\nPrior analysis findings replaced: {result.FindingsRemoved}\nDuration: {result.Duration.TotalSeconds:0.00}s",
+                "Analyze Scan",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Analyze scan UI error");
+            MessageBox.Show("Unexpected error during analysis.", "Analyze Scan",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
             ScansGrid_SelectionChanged(ScansGrid, new SelectionChangedEventArgs(
                 DataGrid.SelectionChangedEvent, new List<object>(), new List<object>()));
         }
