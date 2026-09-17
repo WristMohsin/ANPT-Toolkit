@@ -1,7 +1,7 @@
 <Window x:Class="ANPT.UI.FindingDetailsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Finding Details" Height="560" Width="640"
+        Title="Finding Details" Height="640" Width="720"
         WindowStartupLocation="CenterOwner" ResizeMode="CanResizeWithGrip"
         Background="{StaticResource BrushBackground}">
     <Grid Margin="20">
@@ -16,15 +16,29 @@
                        Foreground="{StaticResource BrushTextPrimary}"/>
             <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                 <TextBlock x:Name="SeverityText" Margin="0,0,16,0" FontWeight="SemiBold"/>
+                <TextBlock x:Name="PriorityText" Margin="0,0,16,0" FontWeight="SemiBold"/>
                 <TextBlock x:Name="StatusText" Margin="0,0,16,0"/>
                 <TextBlock x:Name="RuleText" Foreground="{StaticResource BrushTextSecondary}"/>
             </StackPanel>
+            <TextBlock x:Name="CategoryText" Margin="0,4,0,0"
+                       Foreground="{StaticResource BrushTextSecondary}" FontSize="12"/>
         </StackPanel>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <StackPanel>
                 <TextBlock Text="Description" FontWeight="SemiBold" Margin="0,0,0,4"/>
                 <TextBlock x:Name="DescriptionText" TextWrapping="Wrap" Margin="0,0,0,12"/>
+
+                <TextBlock Text="Risk context" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                <TextBlock x:Name="RiskText" TextWrapping="Wrap" Margin="0,0,0,12"
+                           Foreground="{StaticResource BrushTextSecondary}"/>
+
+                <TextBlock Text="Affected asset" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                <TextBlock x:Name="AssetText" TextWrapping="Wrap" Margin="0,0,0,12"/>
+
+                <TextBlock Text="Network exposure" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                <TextBlock x:Name="NetworkText" TextWrapping="Wrap" Margin="0,0,0,12"
+                           FontFamily="Consolas" FontSize="12"/>
 
                 <TextBlock Text="Evidence" FontWeight="SemiBold" Margin="0,0,0,4"/>
                 <TextBlock x:Name="EvidenceText" TextWrapping="Wrap" Margin="0,0,0,12"
@@ -36,13 +50,13 @@
                 <TextBlock Text="Recommendation" FontWeight="SemiBold" Margin="0,0,0,4"/>
                 <TextBlock x:Name="RecommendationText" TextWrapping="Wrap" Margin="0,0,0,12"/>
 
-                <TextBlock Text="Context" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                <TextBlock x:Name="ContextText" TextWrapping="Wrap" Margin="0,0,0,8"
+                <TextBlock Text="Scan context" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                <TextBlock x:Name="ScanContextText" TextWrapping="Wrap" Margin="0,0,0,8"
                            Foreground="{StaticResource BrushTextSecondary}"/>
             </StackPanel>
         </ScrollViewer>
 
         <Button Grid.Row="2" Content="Close" HorizontalAlignment="Right" Width="100"
-                Style="{StaticResource SecondaryButtonStyle}" Click="Close_Click" Margin="0,12,0,0"/>
+                Style="{StaticResource SecondaryButtonStyle}" Click="Close_Click"/>
     </Grid>
 </Window>
