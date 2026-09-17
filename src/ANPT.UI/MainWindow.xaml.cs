@@ -2,53 +2,29 @@ using System.Windows;
 using System.Windows.Controls;
 using ANPT.Application.Interfaces;
 using ANPT.UI.Views;
-using Serilog;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ANPT.UI;
 
 public partial class MainWindow : Window
 {
+    private readonly IServiceProvider _services;
     private readonly IApplicationInfo _appInfo;
     private readonly ICurrentUserService _currentUser;
-    private readonly IServiceProvider _services;
     private Button? _activeNavButton;
-    private bool _loggingOut;
 
-    public MainWindow(IApplicationInfo appInfo, ICurrentUserService currentUser, IServiceProvider services)
+    public MainWindow(IServiceProvider services)
     {
-        _appInfo = appInfo;
-        _currentUser = currentUser;
         _services = services;
+        _appInfo = services.GetRequiredService<IApplicationInfo>();
+        _currentUser = services.GetRequiredService<ICurrentUserService>();
         InitializeComponent();
-
-        Title = $"{_appInfo.ShortName} — {_appInfo.ApplicationName}";
-        VersionText.Text = $"v{_appInfo.Version}";
-
-        if (_currentUser.IsAuthenticated && _currentUser.User is not null)
+        Title = _appInfo.ProductName;
+        Loaded += (_, _) =>
         {
-            UserDisplayText.Text = _currentUser.DisplayName ?? _currentUser.Username ?? "User";
-            RoleDisplayText.Text = (_currentUser.Role?.ToString() ?? "Viewer").ToUpperInvariant();
-        }
-
-        _activeNavButton = NavDashboard;
-        ShowDashboard();
-    }
-
-    private void LogoutButton_Click(object sender, RoutedEventArgs e)
-    {
-        var result = MessageBox.Show(
-            "Sign out of ANPT Toolkit?",
-            "Logout",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
-
-        if (result != MessageBoxResult.Yes)
-            return;
-
-        _loggingOut = true;
-        Log.Information("User {Username} logged out", _currentUser.Username);
-        _currentUser.Clear();
-        Close();
+            ShowDashboard();
+            SetActiveNav(NavDashboard);
+        };
     }
 
     private void Nav_Click(object sender, RoutedEventArgs e)
@@ -72,9 +48,11 @@ public partial class MainWindow : Window
             case "Scans":
                 ContentArea.Content = new ScansView(_services);
                 break;
+            case "Findings":
+                ContentArea.Content = new FindingsView(_services);
+                break;
             case "Hosts":
             case "Services":
-            case "Findings":
             case "Reports":
             case "Profiles":
             case "Logs":
@@ -101,32 +79,22 @@ public partial class MainWindow : Window
         ContentArea.Content = new DashboardView(_services);
     }
 
-    private static UIElement CreatePlaceholder(string module)
+    private static UIElement CreatePlaceholder(string name)
     {
-        var panel = new StackPanel { Margin = new Thickness(0) };
-        panel.Children.Add(new TextBlock
+        return new TextBlock
         {
-            Text = module,
-            Style = (Style)System.Windows.Application.Current.FindResource("SectionHeaderStyle")
-        });
-        panel.Children.Add(new TextBlock
-        {
-            Text = $"The {module} module will be implemented in a later phase.\n\nPhase 4 delivers Scan Management foundation. Network scan execution remains future work.",
-            Foreground = (System.Windows.Media.Brush)System.Windows.Application.Current.FindResource("BrushTextSecondary"),
-            FontSize = 14,
-            TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(0, 8, 0, 0)
-        });
-        return panel;
+            Text = $"{name} — coming in a later phase",
+            Margin = new Thickness(24),
+            FontSize = 16,
+            Opacity = 0.7
+        };
     }
 
-    protected override void OnClosed(EventArgs e)
+    private void Logout_Click(object sender, RoutedEventArgs e)
     {
-        if (!_loggingOut && _currentUser.IsAuthenticated)
-        {
-            Log.Information("Main window closed by user {Username}", _currentUser.Username);
-            _currentUser.Clear();
-        }
-        base.OnClosed(e);
+        _currentUser.Clear();
+        var login = new LoginWindow(_services);
+        login.Show();
+        Close();
     }
 }
