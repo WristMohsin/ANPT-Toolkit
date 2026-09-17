@@ -12,6 +12,8 @@ public class ScanExecutionService : IScanExecutionService
     private readonly INmapProcessRunner _nmap;
     private readonly IScanProcessTracker _tracker;
     private readonly IScanOutputPathService _outputPaths;
+    private readonly INmapXmlResultReader _xmlReader;
+    private readonly INmapResultPersistenceService _persistence;
     private readonly ILogger<ScanExecutionService> _logger;
 
     public ScanExecutionService(
@@ -21,6 +23,8 @@ public class ScanExecutionService : IScanExecutionService
         INmapProcessRunner nmap,
         IScanProcessTracker tracker,
         IScanOutputPathService outputPaths,
+        INmapXmlResultReader xmlReader,
+        INmapResultPersistenceService persistence,
         ILogger<ScanExecutionService> logger)
     {
         _scans = scans;
@@ -29,6 +33,8 @@ public class ScanExecutionService : IScanExecutionService
         _nmap = nmap;
         _tracker = tracker;
         _outputPaths = outputPaths;
+        _xmlReader = xmlReader;
+        _persistence = persistence;
         _logger = logger;
     }
 
@@ -95,7 +101,6 @@ public class ScanExecutionService : IScanExecutionService
         if (!NmapArgumentBuilder.TryBuild(target.Address, profile, xmlPath, out var arguments, out var argError))
             return await FailScanAsync(scan, argError ?? "Unable to build safe scan arguments.", cancellationToken);
 
-        // Linked CTS: caller cancel + external Cancel via tracker both terminate the process.
         var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         if (!_tracker.TryRegister(scan.Id, linkedCts))
         {
@@ -107,7 +112,6 @@ public class ScanExecutionService : IScanExecutionService
             "Scan execution requested: ScanId={ScanId} TargetId={TargetId} Profile={Profile} Xml={Xml}",
             scan.Id, target.Id, profile.Name, xmlPath);
 
-        // Persist Running; process start is attempted next via runner.
         scan.Status = ScanStatus.Running;
         scan.CurrentStage = ScanStage.Discovery;
         scan.StartedAt = DateTime.UtcNow;
@@ -185,14 +189,14 @@ public class ScanExecutionService : IScanExecutionService
         }
         else
         {
-            // Exit code 0 only → Completed. Never fabricate success.
             scan.Status = ScanStatus.Completed;
             scan.CurrentStage = ScanStage.Completed;
-            scan.StatusMessage =
-                "Nmap process completed successfully. XML output retained for later parsing (not parsed in this phase).";
+            scan.StatusMessage = "Nmap process completed successfully.";
             _logger.LogInformation(
                 "Scan {ScanId} process completed. ExitCode={ExitCode} Duration={Duration} Xml={Xml}",
                 scan.Id, processResult.ExitCode, processResult.Duration, scan.OutputFilePath);
+
+            await TryPersistResultsAsync(scan, CancellationToken.None);
         }
 
         try
@@ -208,10 +212,64 @@ public class ScanExecutionService : IScanExecutionService
         return ScanExecutionResult.Success(scan.Id, processResult);
     }
 
-    /// <summary>
-    /// Request cancellation of a Running scan's process (if registered).
-    /// Database status is finalized by the StartAsync awaiter when the process exits.
-    /// </summary>
+    private async Task TryPersistResultsAsync(Domain.Entities.Scan scan, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(scan.OutputFilePath))
+            {
+                scan.StatusMessage = "Nmap completed but no output file path was recorded; results were not persisted.";
+                return;
+            }
+
+            var parseResult = await _xmlReader.ReadAsync(scan.OutputFilePath, cancellationToken).ConfigureAwait(false);
+            if (!parseResult.Succeeded || parseResult.Scan is null)
+            {
+                var reason = parseResult.ErrorMessage ?? "XML parse failed.";
+                _logger.LogWarning("Scan {ScanId} XML parse failed: {Reason}", scan.Id, reason);
+                scan.StatusMessage = Truncate(
+                    $"Nmap completed successfully, but result parsing failed: {reason}", 500);
+                return;
+            }
+
+            var persistResult = await _persistence.PersistAsync(scan.Id, parseResult.Scan, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (!persistResult.Succeeded)
+            {
+                var reason = persistResult.ErrorMessage ?? "Persistence failed.";
+                _logger.LogWarning("Scan {ScanId} result persistence failed: {Reason}", scan.Id, reason);
+                scan.StatusMessage = Truncate(
+                    $"Nmap completed successfully, but result persistence failed: {reason}", 500);
+                return;
+            }
+
+            scan.NmapScanner = parseResult.Scan.Scanner;
+            scan.NmapVersion = parseResult.Scan.Version;
+            scan.NmapArguments = parseResult.Scan.Arguments;
+            scan.NmapElapsedSeconds = parseResult.Scan.ElapsedSeconds;
+            scan.NmapSummary = parseResult.Scan.Summary;
+            scan.NmapExitStatus = parseResult.Scan.ExitStatus;
+
+            scan.StatusMessage = Truncate(
+                $"Nmap completed. Persisted {persistResult.HostCount} host(s), {persistResult.PortCount} port(s).",
+                500);
+            _logger.LogInformation(
+                "Scan {ScanId} results persisted: hosts={Hosts} ports={Ports}",
+                scan.Id, persistResult.HostCount, persistResult.PortCount);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error while persisting results for scan {ScanId}", scan.Id);
+            scan.StatusMessage = Truncate(
+                $"Nmap completed successfully, but result persistence error: {ex.Message}", 500);
+        }
+    }
+
     public bool RequestCancel(Guid scanId) => _tracker.TryCancel(scanId);
 
     private async Task FinalizeFailedAsync(Domain.Entities.Scan scan, string message)
