@@ -16,7 +16,7 @@
             </Grid.ColumnDefinitions>
             <StackPanel>
                 <TextBlock Text="Scan Management" Style="{StaticResource PageTitleStyle}"/>
-                <TextBlock Text="Create, start, and cancel authorized Nmap scans. Results parsing is not implemented in this phase."
+                <TextBlock Text="Create, start, cancel, and analyze authorized Nmap scans."
                            Style="{StaticResource PageSubtitleStyle}" Margin="0,4,0,0"/>
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
@@ -32,6 +32,7 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="180"/>
+                <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
@@ -52,7 +53,10 @@
                     Margin="0,0,8,0" IsEnabled="False" Click="DetailsButton_Click"/>
             <Button x:Name="StartScanButton" Grid.Column="3" Content="Start" Style="{StaticResource PrimaryButtonStyle}"
                     Margin="0,0,8,0" IsEnabled="False" Click="StartScanButton_Click"/>
-            <Button x:Name="CancelScanButton" Grid.Column="4" Content="Cancel" Style="{StaticResource DangerButtonStyle}"
+            <Button x:Name="AnalyzeScanButton" Grid.Column="4" Content="Analyze" Style="{StaticResource SecondaryButtonStyle}"
+                    Margin="0,0,8,0" IsEnabled="False" Click="AnalyzeScanButton_Click"
+                    ToolTip="Run security analysis rules on a completed scan"/>
+            <Button x:Name="CancelScanButton" Grid.Column="5" Content="Cancel" Style="{StaticResource DangerButtonStyle}"
                     IsEnabled="False" Click="CancelScanButton_Click"/>
         </Grid>
 
