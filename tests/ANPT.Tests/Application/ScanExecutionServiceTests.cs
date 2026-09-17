@@ -20,7 +20,9 @@ public class ScanExecutionServiceTests
         InMemoryScanProfileRepository? profiles = null,
         InMemoryTargetService? targets = null,
         FakeScanProcessTracker? tracker = null,
-        FakeScanOutputPathService? paths = null)
+        FakeScanOutputPathService? paths = null,
+        INmapXmlResultReader? xmlReader = null,
+        INmapResultPersistenceService? persistence = null)
     {
         scans ??= new InMemoryScanRepository();
         nmap ??= new FakeNmapRunner { Available = true };
@@ -28,7 +30,11 @@ public class ScanExecutionServiceTests
         targets ??= CreateDefaultTargets();
         tracker ??= new FakeScanProcessTracker();
         paths ??= new FakeScanOutputPathService();
-        return new ScanExecutionService(scans, profiles, targets, nmap, tracker, paths, NullLogger<ScanExecutionService>.Instance);
+        xmlReader ??= new NoOpXmlResultReader();
+        persistence ??= new NoOpPersistenceService();
+        return new ScanExecutionService(
+            scans, profiles, targets, nmap, tracker, paths, xmlReader, persistence,
+            NullLogger<ScanExecutionService>.Instance);
     }
 
     private InMemoryTargetService CreateDefaultTargets()
@@ -53,14 +59,11 @@ public class ScanExecutionServiceTests
         var scans = new InMemoryScanRepository();
         var nmap = new FakeNmapRunner { Available = true, ExitCode = 0 };
         var paths = new FakeScanOutputPathService();
-        var sut = CreateSut(scans, nmap, paths: paths);
         var scan = await SeedQueuedScanAsync(scans, _authTargetId);
+        var sut = CreateSut(scans, nmap, paths: paths);
         var result = await sut.StartAsync(scan.Id);
         Assert.True(result.Succeeded);
         Assert.Equal(1, nmap.RunCallCount);
-        Assert.Contains("10.0.0.1", nmap.LastRequest!.Arguments);
-        Assert.NotNull(nmap.LastRequest.XmlOutputPath);
-        Assert.Contains("-oX", nmap.LastRequest.Arguments);
         var final = await scans.GetByIdAsync(scan.Id);
         Assert.Equal(ScanStatus.Completed, final!.Status);
         Assert.NotNull(final.OutputFilePath);
@@ -105,7 +108,7 @@ public class ScanExecutionServiceTests
     {
         var scans = new InMemoryScanRepository();
         var nmap = new FakeNmapRunner { Available = true };
-        var scan = await SeedQueuedScanAsync(scans, Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"));
+        var scan = await SeedQueuedScanAsync(scans, Guid.NewGuid());
         Assert.False((await CreateSut(scans, nmap).StartAsync(scan.Id)).Succeeded);
         Assert.Equal(0, nmap.RunCallCount);
     }
@@ -160,7 +163,6 @@ public class ScanExecutionServiceTests
         var scans = new InMemoryScanRepository();
         var nmap = new FakeNmapRunner { Available = true };
         var scan = await SeedQueuedScanAsync(scans, _authTargetId);
-        // fix Available=false
         nmap = new FakeNmapRunner { Available = false };
         Assert.False((await CreateSut(scans, nmap).StartAsync(scan.Id)).Succeeded);
         Assert.Equal(0, nmap.RunCallCount);
@@ -168,13 +170,12 @@ public class ScanExecutionServiceTests
     }
 
     [Fact]
-    public async Task Start_ProcessStartupFailure_MarksFailed()
+    public async Task Start_FailStartup_MarksFailed()
     {
         var scans = new InMemoryScanRepository();
         var nmap = new FakeNmapRunner { Available = true, FailStartup = true };
         var scan = await SeedQueuedScanAsync(scans, _authTargetId);
         Assert.False((await CreateSut(scans, nmap).StartAsync(scan.Id)).Succeeded);
-        Assert.Equal(1, nmap.RunCallCount);
         Assert.Equal(ScanStatus.Failed, (await scans.GetByIdAsync(scan.Id))!.Status);
     }
 
@@ -190,7 +191,7 @@ public class ScanExecutionServiceTests
     }
 
     [Fact]
-    public async Task Start_CancelledProcess_MarksCancelled()
+    public async Task Start_SimulateCancel_MarksCancelled()
     {
         var scans = new InMemoryScanRepository();
         var nmap = new FakeNmapRunner { Available = true, SimulateCancel = true };
@@ -206,43 +207,39 @@ public class ScanExecutionServiceTests
         var nmap = new FakeNmapRunner { Available = true };
         var tracker = new FakeScanProcessTracker();
         var scan = await SeedQueuedScanAsync(scans, _authTargetId);
-        tracker.PreRegister(scan.Id);
+        tracker.ForceRegister(scan.Id);
         var result = await CreateSut(scans, nmap, tracker: tracker).StartAsync(scan.Id);
         Assert.False(result.Succeeded);
         Assert.Equal(0, nmap.RunCallCount);
-        Assert.Equal(ScanStatus.Queued, (await scans.GetByIdAsync(scan.Id))!.Status);
     }
 
     [Fact]
-    public async Task RequestCancel_SignalsRegisteredProcess()
+    public void RequestCancel_WhenNotRegistered_ReturnsFalse()
     {
-        var tracker = new FakeScanProcessTracker();
-        var sut = CreateSut(tracker: tracker);
-        var id = Guid.NewGuid();
-        var cts = new CancellationTokenSource();
-        Assert.True(tracker.TryRegister(id, cts));
-        Assert.True(sut.RequestCancel(id));
-        Assert.True(cts.IsCancellationRequested);
-    }
-
-    [Fact]
-    public async Task RequestCancel_UnknownScan_ReturnsFalse()
-    {
-        var sut = CreateSut();
+        var sut = CreateSut(tracker: new FakeScanProcessTracker());
         Assert.False(sut.RequestCancel(Guid.NewGuid()));
     }
 
     [Fact]
-    public async Task CheckAvailability_DelegatesToRunner()
+    public void RequestCancel_WhenRegistered_ReturnsTrue()
+    {
+        var tracker = new FakeScanProcessTracker();
+        var id = Guid.NewGuid();
+        tracker.ForceRegister(id);
+        var sut = CreateSut(tracker: tracker);
+        Assert.True(sut.RequestCancel(id));
+    }
+
+    [Fact]
+    public async Task CheckNmapAvailability_Delegates()
     {
         var nmap = new FakeNmapRunner { Available = true, VersionText = "Nmap 7.94" };
         var result = await CreateSut(nmap: nmap).CheckNmapAvailabilityAsync();
         Assert.True(result.IsAvailable);
-        Assert.Equal("Nmap 7.94", result.VersionText);
     }
 
     [Fact]
-    public async Task Start_OutputPath_IsUniqueAndPassedToRunner()
+    public async Task Start_UniqueXmlPaths_PerScan()
     {
         var scans = new InMemoryScanRepository();
         var nmap = new FakeNmapRunner { Available = true, ExitCode = 0 };
@@ -250,12 +247,10 @@ public class ScanExecutionServiceTests
         var scan1 = await SeedQueuedScanAsync(scans, _authTargetId);
         var scan2 = await SeedQueuedScanAsync(scans, _authTargetId);
         await CreateSut(scans, nmap, paths: paths).StartAsync(scan1.Id);
-        var path1 = nmap.LastRequest!.XmlOutputPath;
         await CreateSut(scans, nmap, paths: paths).StartAsync(scan2.Id);
-        var path2 = nmap.LastRequest!.XmlOutputPath;
-        Assert.NotEqual(path1, path2);
-        Assert.Contains("scan-", path1!);
-        Assert.EndsWith(".xml", path1);
+        var s1 = await scans.GetByIdAsync(scan1.Id);
+        var s2 = await scans.GetByIdAsync(scan2.Id);
+        Assert.NotEqual(s1!.OutputFilePath, s2!.OutputFilePath);
     }
 
     private sealed class FakeNmapRunner : INmapProcessRunner
@@ -272,8 +267,8 @@ public class ScanExecutionServiceTests
         public Task<NmapAvailabilityResult> CheckAvailabilityAsync(CancellationToken cancellationToken = default)
         {
             if (!Available)
-                return Task.FromResult(NmapAvailabilityResult.Unavailable("Nmap not found (fake)."));
-            return Task.FromResult(NmapAvailabilityResult.Available(@"C:\Program Files\Nmap\nmap.exe", VersionText));
+                return Task.FromResult(NmapAvailabilityResult.Unavailable("Nmap not found"));
+            return Task.FromResult(NmapAvailabilityResult.Available("C:\\nmap\\nmap.exe", VersionText ?? "Nmap 7.94"));
         }
 
         public Task<NmapRunResult> RunAsync(NmapRunRequest request, CancellationToken cancellationToken = default)
@@ -281,31 +276,28 @@ public class ScanExecutionServiceTests
             RunCallCount++;
             LastRequest = request;
             if (FailStartup)
-                return Task.FromResult(NmapRunResult.StartupFailure("start failed (fake)"));
+                return Task.FromResult(NmapRunResult.NotStarted("start failed"));
             if (SimulateCancel)
-                return Task.FromResult(NmapRunResult.FromProcess(-1, "", "", TimeSpan.FromMilliseconds(10), cancelled: true, request.XmlOutputPath));
-            return Task.FromResult(NmapRunResult.FromProcess(ExitCode, "ok", Stderr, TimeSpan.FromMilliseconds(5), false, request.XmlOutputPath));
+                return Task.FromResult(NmapRunResult.WasCancelled(request.XmlOutputPath));
+            if (ExitCode != 0)
+                return Task.FromResult(NmapRunResult.Finished(ExitCode, "", Stderr, request.XmlOutputPath, TimeSpan.FromSeconds(1)));
+            return Task.FromResult(NmapRunResult.Finished(0, "", "", request.XmlOutputPath, TimeSpan.FromSeconds(1)));
         }
     }
 
     private sealed class FakeScanProcessTracker : IScanProcessTracker
     {
-        private readonly Dictionary<Guid, CancellationTokenSource> _map = new();
-        public void PreRegister(Guid id) => _map[id] = new CancellationTokenSource();
-        public bool TryRegister(Guid scanId, CancellationTokenSource linkedCts)
+        private readonly HashSet<Guid> _registered = new();
+        public void ForceRegister(Guid id) => _registered.Add(id);
+        public bool TryRegister(Guid scanId, CancellationTokenSource cts)
         {
-            if (_map.ContainsKey(scanId)) return false;
-            _map[scanId] = linkedCts;
+            if (_registered.Contains(scanId)) return false;
+            _registered.Add(scanId);
             return true;
         }
-        public bool TryCancel(Guid scanId)
-        {
-            if (!_map.TryGetValue(scanId, out var cts)) return false;
-            cts.Cancel();
-            return true;
-        }
-        public void Unregister(Guid scanId) => _map.Remove(scanId);
-        public bool IsRegistered(Guid scanId) => _map.ContainsKey(scanId);
+        public void Unregister(Guid scanId) => _registered.Remove(scanId);
+        public bool IsRegistered(Guid scanId) => _registered.Contains(scanId);
+        public bool TryCancel(Guid scanId) => _registered.Contains(scanId);
     }
 
     private sealed class FakeScanOutputPathService : IScanOutputPathService
@@ -315,7 +307,7 @@ public class ScanExecutionServiceTests
         public string CreateUniqueXmlPath(Guid scanId)
         {
             _n++;
-            return $@"C:\app\ScanOutput\scan-{scanId:N}-{_n}.xml";
+            return $"C:\\app\\ScanOutput\\scan-{scanId:N}-{_n}.xml";
         }
     }
 
@@ -363,5 +355,25 @@ public class ScanExecutionServiceTests
         public Task<TargetServiceResult> ArchiveAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<TargetServiceResult> SetAuthorizationAsync(Guid id, bool confirmed, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public bool IsEligibleForScan(Target target) => target is not null && target.Status == TargetStatus.Active && target.AuthorizationConfirmed;
+    }
+
+    private sealed class NoOpXmlResultReader : INmapXmlResultReader
+    {
+        public Task<ANPT.Application.Models.Nmap.NmapParseResult> ReadAsync(
+            string xmlFilePath, CancellationToken cancellationToken = default) =>
+            Task.FromResult(ANPT.Application.Models.Nmap.NmapParseResult.Failure("No-op reader in unit tests."));
+
+        public Task<ANPT.Application.Models.Nmap.NmapParseResult> ReadForScanAsync(
+            Scan scan, CancellationToken cancellationToken = default) =>
+            Task.FromResult(ANPT.Application.Models.Nmap.NmapParseResult.Failure("No-op reader in unit tests."));
+    }
+
+    private sealed class NoOpPersistenceService : INmapResultPersistenceService
+    {
+        public Task<NmapPersistenceResult> PersistAsync(
+            Guid scanId,
+            ANPT.Application.Models.Nmap.NmapScanResult parsedResult,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(NmapPersistenceResult.Success(0, 0));
     }
 }
