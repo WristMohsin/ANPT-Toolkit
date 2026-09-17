@@ -1,4 +1,5 @@
 using ANPT.Application.Interfaces;
+using ANPT.Application.Services;
 using ANPT.Infrastructure.Configuration;
 using ANPT.Infrastructure.Data;
 using ANPT.Infrastructure.Repositories;
@@ -29,6 +30,8 @@ public static class DependencyInjection
         services.AddSingleton<IScanOutputPathService, ScanOutputPathService>();
         services.AddSingleton<INmapXmlResultReader, NmapXmlResultReader>();
         services.AddScoped<INmapResultPersistenceService, NmapResultPersistenceService>();
+        services.AddScoped<IFindingRepository, FindingRepository>();
+        services.AddScoped<IScanHostLoader, ScanHostLoader>();
 
         return services;
     }

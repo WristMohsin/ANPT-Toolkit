@@ -24,4 +24,9 @@ public class Finding : BaseEntity
     public string? Reference { get; set; }
     public string? AffectedPort { get; set; }
     public string? AffectedService { get; set; }
+
+    /// <summary>
+    /// Stable analysis rule identifier (e.g. OPEN-SERVICE-EXPOSURE). Null for non-rule findings.
+    /// </summary>
+    public string? RuleId { get; set; }
 }

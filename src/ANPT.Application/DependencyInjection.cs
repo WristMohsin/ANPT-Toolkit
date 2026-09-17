@@ -1,3 +1,4 @@
+using ANPT.Application.Analysis;
 using ANPT.Application.Interfaces;
 using ANPT.Application.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +16,14 @@ public static class DependencyInjection
         services.AddScoped<IScanService, ScanService>();
         services.AddScoped<IScanExecutionService, ScanExecutionService>();
         services.AddSingleton<INmapXmlParser, NmapXmlParser>();
+
+        // Phase 5E — security analysis foundation
+        services.AddSingleton<IAnalysisRule, OpenServiceExposureRule>();
+        services.AddSingleton<IAnalysisRule, ServiceWithoutIdentificationRule>();
+        services.AddSingleton<IAnalysisRule, SensitiveServiceExposureRule>();
+        services.AddScoped<ISecurityAnalysisService, SecurityAnalysisService>();
+        services.AddScoped<IFindingService, FindingService>();
+
         return services;
     }
 }
