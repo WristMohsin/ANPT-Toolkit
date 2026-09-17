@@ -62,13 +62,13 @@ ANPT Toolkit is a Senior Design / Final Year Project that provides a modern, pro
 
 ### Persistence (Phase 5D)
 
-- After a successful Nmap exit (code 0), XML is read and parsed, then mapped into EF entities.
+- End-to-end after exit code 0: **XML → INmapXmlResultReader → INmapXmlParser → INmapResultPersistenceService → SQLite**.
 - **Transactional** persistence under the owning Scan (`INmapResultPersistenceService`).
 - Relationships: `Scan → Host → Address / Hostname / Service (port)`.
 - Hosts support IPv4, IPv6, MAC, and multiple hostnames; ports may exist without service details.
 - **Reprocessing** replaces prior result rows for that Scan only (no uncontrolled duplicates).
 - Scan-level Nmap metadata stored on the Scan row (scanner, version, args, elapsed, summary, exit).
-- Parse/persist failures do **not** change a successful process result from Completed; they update StatusMessage.
+- Parse/persist failures leave the scan **Completed** (Nmap succeeded) but set a clear StatusMessage that results were not stored.
 
 **Still NOT implemented:** Findings, Vulnerability Analysis, CVE matching, Reporting, Scheduling, Hosts/Services UI.
 
