@@ -1,0 +1,48 @@
+<Window x:Class="ANPT.UI.FindingDetailsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Finding Details" Height="560" Width="640"
+        WindowStartupLocation="CenterOwner" ResizeMode="CanResizeWithGrip"
+        Background="{StaticResource BrushBackground}">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock x:Name="TitleText" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap"
+                       Foreground="{StaticResource BrushTextPrimary}"/>
+            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                <TextBlock x:Name="SeverityText" Margin="0,0,16,0" FontWeight="SemiBold"/>
+                <TextBlock x:Name="StatusText" Margin="0,0,16,0"/>
+                <TextBlock x:Name="RuleText" Foreground="{StaticResource BrushTextSecondary}"/>
+            </StackPanel>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock Text="Description" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                <TextBlock x:Name="DescriptionText" TextWrapping="Wrap" Margin="0,0,0,12"/>
+
+                <TextBlock Text="Evidence" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                <TextBlock x:Name="EvidenceText" TextWrapping="Wrap" Margin="0,0,0,12"
+                           FontFamily="Consolas" FontSize="12"/>
+
+                <TextBlock Text="Impact" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                <TextBlock x:Name="ImpactText" TextWrapping="Wrap" Margin="0,0,0,12"/>
+
+                <TextBlock Text="Recommendation" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                <TextBlock x:Name="RecommendationText" TextWrapping="Wrap" Margin="0,0,0,12"/>
+
+                <TextBlock Text="Context" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                <TextBlock x:Name="ContextText" TextWrapping="Wrap" Margin="0,0,0,8"
+                           Foreground="{StaticResource BrushTextSecondary}"/>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Button Grid.Row="2" Content="Close" HorizontalAlignment="Right" Width="100"
+                Style="{StaticResource SecondaryButtonStyle}" Click="Close_Click" Margin="0,12,0,0"/>
+    </Grid>
+</Window>
