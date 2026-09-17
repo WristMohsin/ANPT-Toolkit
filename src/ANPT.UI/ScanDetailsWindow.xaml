@@ -1,7 +1,7 @@
 <Window x:Class="ANPT.UI.ScanDetailsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Scan Details" Height="480" Width="560" MinHeight="400" MinWidth="500"
+        Title="Scan Details" Height="520" Width="560" MinHeight="400" MinWidth="500"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
         Background="{StaticResource BrushBackgroundPrimary}"
         Foreground="{StaticResource BrushTextPrimary}" FontFamily="Segoe UI">
@@ -58,9 +58,11 @@
 
                 <Border Style="{StaticResource CardStyle}" Margin="0">
                     <StackPanel>
-                        <TextBlock Text="Scan Results" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                        <TextBlock Text="No scan results are available yet. Scan execution (network discovery, port scanning, findings) will be implemented in a later phase."
-                                   Foreground="{StaticResource BrushTextSecondary}" FontSize="13" TextWrapping="Wrap"/>
+                        <TextBlock Text="Security Findings" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <TextBlock x:Name="FindingsSummaryText" Text="..." TextWrapping="Wrap"
+                                   Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,8"/>
+                        <TextBlock Text="Use Analyze on the Scans page for completed scans, then open Findings for details."
+                                   FontSize="12" Foreground="{StaticResource BrushTextMuted}" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Border>
             </StackPanel>
