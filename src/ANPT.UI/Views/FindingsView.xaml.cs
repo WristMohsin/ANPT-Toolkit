@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using ANPT.Application.Interfaces;
+using ANPT.Application.Models.Findings;
 using ANPT.Domain.Entities;
 using ANPT.Domain.Enums;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,32 +20,51 @@ public partial class FindingsView : UserControl
         _services = services;
         InitializeComponent();
         Loaded += async (_, _) => await LoadAsync();
+        FindingsGrid.SelectionChanged += (_, _) =>
+            DetailsButton.IsEnabled = FindingsGrid.SelectedItem is FindingRow;
     }
 
-    private async void RefreshButton_Click(object sender, RoutedEventArgs e) => await LoadAsync();
-
-    private async void SearchBox_TextChanged(object sender, TextChangedEventArgs e) => await LoadAsync();
-
-    private async void Filter_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void Filter_Changed(object sender, EventArgs e)
     {
         if (!IsLoaded) return;
         await LoadAsync();
     }
 
-    private void FindingsGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void Refresh_Click(object sender, RoutedEventArgs e) => await LoadAsync();
+
+    private async void ClearFilters_Click(object sender, RoutedEventArgs e)
     {
-        DetailsButton.IsEnabled = FindingsGrid.SelectedItem is FindingRow;
+        SearchBox.Text = string.Empty;
+        SeverityFilterCombo.SelectedIndex = 0;
+        StatusFilterCombo.SelectedIndex = 0;
+        RuleFilterCombo.SelectedIndex = 0;
+        await LoadAsync();
     }
 
     private void DetailsButton_Click(object sender, RoutedEventArgs e) => OpenDetails();
-
     private void FindingsGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e) => OpenDetails();
 
-    private void OpenDetails()
+    private async void OpenDetails()
     {
         if (FindingsGrid.SelectedItem is not FindingRow row) return;
-        var win = new FindingDetailsWindow(row.Entity) { Owner = Window.GetWindow(this) };
-        win.ShowDialog();
+        try
+        {
+            using var scope = _services.CreateScope();
+            var service = scope.ServiceProvider.GetRequiredService<IFindingService>();
+            var detail = await service.GetDetailAsync(row.Entity.Id);
+            if (detail is null)
+            {
+                MessageBox.Show("Finding not found.", "Finding Details", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            var win = new FindingDetailsWindow(detail) { Owner = Window.GetWindow(this) };
+            win.ShowDialog();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to open finding details");
+            MessageBox.Show("Unable to open finding details.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private async Task LoadAsync()
@@ -72,11 +92,21 @@ public partial class FindingsView : UserControl
                 status = st;
             }
 
-            var list = await service.SearchAsync(SearchBox.Text, severity, status, null);
+            string? ruleId = null;
+            if (RuleFilterCombo.SelectedItem is ComboBoxItem ruleItem
+                && ruleItem.Tag is string ruleTag
+                && !string.IsNullOrEmpty(ruleTag))
+            {
+                ruleId = ruleTag;
+            }
+
+            var list = await service.SearchAsync(SearchBox.Text, severity, status, null, ruleId);
+            var summary = await service.GetSummaryAsync();
             _rows = list.Select(FindingRow.From).ToList();
             FindingsGrid.ItemsSource = _rows;
             EmptyMessage.Visibility = _rows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-            StatusText.Text = $"{_rows.Count} finding(s)";
+            StatusText.Text =
+                $"{_rows.Count} shown · Total {summary.Total} · Open {summary.Open} · High/Critical {summary.High + summary.Critical}";
         }
         catch (Exception ex)
         {
@@ -91,19 +121,25 @@ public partial class FindingsView : UserControl
         public string Title => Entity.Title;
         public Severity Severity => Entity.Severity;
         public FindingStatus Status => Entity.Status;
+        public FindingPriority Priority { get; init; }
         public string? AffectedPort => Entity.AffectedPort;
         public string? RuleId => Entity.RuleId;
         public DateTime CreatedAt => Entity.CreatedAt;
-        public string HostDisplay { get; init; } = "—";
+        public string HostDisplay { get; init; } = "-";
 
-        public static FindingRow From(Finding f) => new()
+        public static FindingRow From(Finding f)
         {
-            Entity = f,
-            HostDisplay = f.Host is null
-                ? "—"
-                : !string.IsNullOrWhiteSpace(f.Host.IpAddress)
-                    ? f.Host.IpAddress
-                    : f.Host.Hostname ?? f.Host.MacAddress ?? "—"
-        };
+            var risk = FindingRiskContext.FromSeverity(f.Severity, f.RuleId);
+            return new FindingRow
+            {
+                Entity = f,
+                Priority = risk.Priority,
+                HostDisplay = f.Host is null
+                    ? "-"
+                    : !string.IsNullOrWhiteSpace(f.Host.IpAddress)
+                        ? f.Host.IpAddress
+                        : f.Host.Hostname ?? f.Host.MacAddress ?? "-"
+            };
+        }
     }
 }
