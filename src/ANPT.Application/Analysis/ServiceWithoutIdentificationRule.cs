@@ -13,6 +13,8 @@ public sealed class ServiceWithoutIdentificationRule : IAnalysisRule
     public string Name => "Service Without Identification";
     public string Description => "Open ports where service identification metadata is missing.";
 
+    public string Category => "Service Identification";
+
     public IReadOnlyList<Finding> Analyze(Scan scan, IReadOnlyList<Host> hosts)
     {
         var findings = new List<Finding>();
