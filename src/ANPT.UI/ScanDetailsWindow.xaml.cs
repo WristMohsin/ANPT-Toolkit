@@ -36,14 +36,14 @@ public partial class ScanDetailsWindow : Window
             IdText.Text = scan.Id.ToString();
             StatusText.Text = scan.Status.ToString();
             TargetText.Text = scan.Target?.Name ?? scan.TargetId.ToString();
-            AddressText.Text = scan.Target?.Address ?? "—";
+            AddressText.Text = scan.Target?.Address ?? "-";
             AuthText.Text = scan.Target is null
-                ? "—"
+                ? "-"
                 : (scan.Target.AuthorizationConfirmed ? "Confirmed" : "Not confirmed");
             ProfileText.Text = scan.ScanProfile?.Name ?? scan.ScanProfileId.ToString();
             CreatedText.Text = scan.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss") + " UTC";
-            StartedText.Text = scan.StartedAt.HasValue ? scan.StartedAt.Value.ToString("yyyy-MM-dd HH:mm:ss") + " UTC" : "—";
-            CompletedText.Text = scan.CompletedAt.HasValue ? scan.CompletedAt.Value.ToString("yyyy-MM-dd HH:mm:ss") + " UTC" : "—";
+            StartedText.Text = scan.StartedAt.HasValue ? scan.StartedAt.Value.ToString("yyyy-MM-dd HH:mm:ss") + " UTC" : "-";
+            CompletedText.Text = scan.CompletedAt.HasValue ? scan.CompletedAt.Value.ToString("yyyy-MM-dd HH:mm:ss") + " UTC" : "-";
 
             if (scan.StartedAt.HasValue && scan.CompletedAt.HasValue)
             {
@@ -54,10 +54,16 @@ public partial class ScanDetailsWindow : Window
             }
             else
             {
-                DurationText.Text = "—";
+                DurationText.Text = "-";
             }
 
-            MessageText.Text = scan.StatusMessage ?? scan.ErrorMessage ?? "—";
+            MessageText.Text = scan.StatusMessage ?? scan.ErrorMessage ?? "-";
+
+            var findingService = scope.ServiceProvider.GetRequiredService<IFindingService>();
+            var summary = await findingService.GetSummaryAsync(_scanId);
+            FindingsSummaryText.Text =
+                $"Total findings: {summary.Total}  ·  Open: {summary.Open}  ·  High/Critical: {summary.High + summary.Critical}\n" +
+                $"Info: {summary.Informational}  Low: {summary.Low}  Medium: {summary.Medium}  High: {summary.High}  Critical: {summary.Critical}";
         }
         catch (Exception ex)
         {
