@@ -16,6 +16,9 @@ public interface IAnalysisRule
     /// <summary>Short description of what the rule evaluates.</summary>
     string Description { get; }
 
+    /// <summary>Rule category for filtering and presentation (e.g. Network Exposure).</summary>
+    string Category { get; }
+
     /// <summary>
     /// Analyze the given scan graph and return zero or more candidate findings.
     /// Must not perform network I/O.

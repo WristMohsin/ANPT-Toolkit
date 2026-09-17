@@ -40,21 +40,3 @@ public sealed class SecurityAnalysisResult
     public static SecurityAnalysisResult Failure(string message) =>
         new() { Succeeded = false, ErrorMessage = message };
 }
-
-public interface IFindingService
-{
-    Task<IReadOnlyList<Domain.Entities.Finding>> SearchAsync(
-        string? searchText,
-        Severity? severityFilter,
-        FindingStatus? statusFilter,
-        Guid? scanId,
-        CancellationToken cancellationToken = default);
-
-    Task<Domain.Entities.Finding?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
-
-    Task<int> GetTotalCountAsync(CancellationToken cancellationToken = default);
-
-    Task<int> GetOpenCountAsync(CancellationToken cancellationToken = default);
-
-    Task<int> GetHighOrCriticalCountAsync(CancellationToken cancellationToken = default);
-}
