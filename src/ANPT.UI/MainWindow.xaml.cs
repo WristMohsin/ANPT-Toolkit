@@ -2,29 +2,53 @@ using System.Windows;
 using System.Windows.Controls;
 using ANPT.Application.Interfaces;
 using ANPT.UI.Views;
-using Microsoft.Extensions.DependencyInjection;
+using Serilog;
 
 namespace ANPT.UI;
 
 public partial class MainWindow : Window
 {
-    private readonly IServiceProvider _services;
     private readonly IApplicationInfo _appInfo;
     private readonly ICurrentUserService _currentUser;
+    private readonly IServiceProvider _services;
     private Button? _activeNavButton;
+    private bool _loggingOut;
 
-    public MainWindow(IServiceProvider services)
+    public MainWindow(IApplicationInfo appInfo, ICurrentUserService currentUser, IServiceProvider services)
     {
+        _appInfo = appInfo;
+        _currentUser = currentUser;
         _services = services;
-        _appInfo = services.GetRequiredService<IApplicationInfo>();
-        _currentUser = services.GetRequiredService<ICurrentUserService>();
         InitializeComponent();
-        Title = _appInfo.ProductName;
-        Loaded += (_, _) =>
+
+        Title = $"{_appInfo.ShortName} — {_appInfo.ApplicationName}";
+        VersionText.Text = $"v{_appInfo.Version}";
+
+        if (_currentUser.IsAuthenticated && _currentUser.User is not null)
         {
-            ShowDashboard();
-            SetActiveNav(NavDashboard);
-        };
+            UserDisplayText.Text = _currentUser.DisplayName ?? _currentUser.Username ?? "User";
+            RoleDisplayText.Text = (_currentUser.Role?.ToString() ?? "Viewer").ToUpperInvariant();
+        }
+
+        _activeNavButton = NavDashboard;
+        ShowDashboard();
+    }
+
+    private void LogoutButton_Click(object sender, RoutedEventArgs e)
+    {
+        var result = MessageBox.Show(
+            "Sign out of ANPT Toolkit?",
+            "Logout",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+
+        if (result != MessageBoxResult.Yes)
+            return;
+
+        _loggingOut = true;
+        Log.Information("User {Username} logged out", _currentUser.Username);
+        _currentUser.Clear();
+        Close();
     }
 
     private void Nav_Click(object sender, RoutedEventArgs e)
@@ -79,22 +103,32 @@ public partial class MainWindow : Window
         ContentArea.Content = new DashboardView(_services);
     }
 
-    private static UIElement CreatePlaceholder(string name)
+    private static UIElement CreatePlaceholder(string module)
     {
-        return new TextBlock
+        var panel = new StackPanel { Margin = new Thickness(0) };
+        panel.Children.Add(new TextBlock
         {
-            Text = $"{name} — coming in a later phase",
-            Margin = new Thickness(24),
-            FontSize = 16,
-            Opacity = 0.7
-        };
+            Text = module,
+            Style = (Style)System.Windows.Application.Current.FindResource("SectionHeaderStyle")
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = $"The {module} module will be implemented in a later phase.",
+            Foreground = (System.Windows.Media.Brush)System.Windows.Application.Current.FindResource("BrushTextSecondary"),
+            FontSize = 14,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 8, 0, 0)
+        });
+        return panel;
     }
 
-    private void Logout_Click(object sender, RoutedEventArgs e)
+    protected override void OnClosed(EventArgs e)
     {
-        _currentUser.Clear();
-        var login = new LoginWindow(_services);
-        login.Show();
-        Close();
+        if (!_loggingOut && _currentUser.IsAuthenticated)
+        {
+            Log.Information("Main window closed by user {Username}", _currentUser.Username);
+            _currentUser.Clear();
+        }
+        base.OnClosed(e);
     }
 }
