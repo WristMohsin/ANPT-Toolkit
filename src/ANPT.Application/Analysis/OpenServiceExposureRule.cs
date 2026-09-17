@@ -14,6 +14,8 @@ public sealed class OpenServiceExposureRule : IAnalysisRule
     public string Name => "Open Service Exposure";
     public string Description => "Identifies hosts with open ports/services observed by Nmap.";
 
+    public string Category => "Network Exposure";
+
     public IReadOnlyList<Finding> Analyze(Scan scan, IReadOnlyList<Host> hosts)
     {
         var findings = new List<Finding>();
