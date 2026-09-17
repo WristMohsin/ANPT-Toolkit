@@ -74,7 +74,6 @@ public class AnptDbContext : DbContext
         modelBuilder.Entity<Host>(e =>
         {
             e.HasKey(x => x.Id);
-            // Preferred address may be empty when host has only MAC / hostname (no IPv4/IPv6).
             e.Property(x => x.IpAddress).HasMaxLength(45).IsRequired();
             e.Property(x => x.Hostname).HasMaxLength(255);
             e.Property(x => x.MacAddress).HasMaxLength(50);
@@ -134,11 +133,14 @@ public class AnptDbContext : DbContext
             e.Property(x => x.Reference).HasMaxLength(500);
             e.Property(x => x.AffectedPort).HasMaxLength(20);
             e.Property(x => x.AffectedService).HasMaxLength(100);
+            e.Property(x => x.RuleId).HasMaxLength(100);
             e.HasOne(x => x.Scan).WithMany(s => s.Findings).HasForeignKey(x => x.ScanId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.Host).WithMany().HasForeignKey(x => x.HostId).OnDelete(DeleteBehavior.SetNull);
             e.HasOne(x => x.Service).WithMany().HasForeignKey(x => x.ServiceId).OnDelete(DeleteBehavior.SetNull);
             e.HasIndex(x => x.Severity);
             e.HasIndex(x => x.Status);
+            e.HasIndex(x => x.RuleId);
+            e.HasIndex(x => new { x.ScanId, x.RuleId, x.HostId, x.ServiceId });
         });
 
         modelBuilder.Entity<AuditLog>(e =>
