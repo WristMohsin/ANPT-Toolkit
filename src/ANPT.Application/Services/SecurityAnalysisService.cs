@@ -130,33 +130,3 @@ public sealed class SecurityAnalysisService : ISecurityAnalysisService
         return result;
     }
 }
-
-public sealed class FindingService : IFindingService
-{
-    private readonly IFindingRepository _repo;
-
-    public FindingService(IFindingRepository repo)
-    {
-        _repo = repo;
-    }
-
-    public Task<IReadOnlyList<Finding>> SearchAsync(
-        string? searchText,
-        Severity? severityFilter,
-        FindingStatus? statusFilter,
-        Guid? scanId,
-        CancellationToken cancellationToken = default) =>
-        _repo.SearchAsync(searchText, severityFilter, statusFilter, scanId, cancellationToken);
-
-    public Task<Finding?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
-        _repo.GetByIdAsync(id, cancellationToken);
-
-    public Task<int> GetTotalCountAsync(CancellationToken cancellationToken = default) =>
-        _repo.CountAsync(cancellationToken);
-
-    public Task<int> GetOpenCountAsync(CancellationToken cancellationToken = default) =>
-        _repo.CountOpenAsync(cancellationToken);
-
-    public Task<int> GetHighOrCriticalCountAsync(CancellationToken cancellationToken = default) =>
-        _repo.CountHighOrCriticalAsync(cancellationToken);
-}
