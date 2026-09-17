@@ -77,7 +77,10 @@ public partial class ScansView : UserControl
 
     private async void NewScanButton_Click(object sender, RoutedEventArgs e)
     {
-        var window = new ScanCreateWindow(_services) { Owner = Window.GetWindow(this) };
+        var window = new ScanCreateWindow(_services)
+        {
+            Owner = Window.GetWindow(this)
+        };
         if (window.ShowDialog() == true)
             await LoadScansAsync();
     }
@@ -89,7 +92,10 @@ public partial class ScansView : UserControl
     private void OpenDetails()
     {
         if (ScansGrid.SelectedItem is not Scan selected) return;
-        var window = new ScanDetailsWindow(selected) { Owner = Window.GetWindow(this) };
+        var window = new ScanDetailsWindow(_services, selected.Id)
+        {
+            Owner = Window.GetWindow(this)
+        };
         window.ShowDialog();
     }
 
