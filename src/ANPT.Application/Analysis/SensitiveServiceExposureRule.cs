@@ -14,6 +14,8 @@ public sealed class SensitiveServiceExposureRule : IAnalysisRule
     public string Name => "Sensitive Service Exposure";
     public string Description => "Open ports associated with commonly sensitive network services.";
 
+    public string Category => "Sensitive Services";
+
     private static readonly Dictionary<int, (string Label, string Note)> SensitivePorts = new()
     {
         [21] = ("FTP", "FTP commonly transfers credentials and data without modern encryption unless FTPS is enforced."),
