@@ -60,8 +60,7 @@ public class ScanExecutionServiceTests
         var nmap = new FakeNmapRunner { Available = true, ExitCode = 0 };
         var paths = new FakeScanOutputPathService();
         var scan = await SeedQueuedScanAsync(scans, _authTargetId);
-        var sut = CreateSut(scans, nmap, paths: paths);
-        var result = await sut.StartAsync(scan.Id);
+        var result = await CreateSut(scans, nmap, paths: paths).StartAsync(scan.Id);
         Assert.True(result.Succeeded);
         Assert.Equal(1, nmap.RunCallCount);
         var final = await scans.GetByIdAsync(scan.Id);
@@ -77,8 +76,7 @@ public class ScanExecutionServiceTests
         var scans = new InMemoryScanRepository();
         var nmap = new FakeNmapRunner { Available = true };
         var scan = await SeedQueuedScanAsync(scans, _unauthTargetId);
-        var result = await CreateSut(scans, nmap).StartAsync(scan.Id);
-        Assert.False(result.Succeeded);
+        Assert.False((await CreateSut(scans, nmap).StartAsync(scan.Id)).Succeeded);
         Assert.Equal(0, nmap.RunCallCount);
         Assert.Equal(ScanStatus.Failed, (await scans.GetByIdAsync(scan.Id))!.Status);
     }
@@ -161,9 +159,8 @@ public class ScanExecutionServiceTests
     public async Task Start_NmapUnavailable_FailsScan()
     {
         var scans = new InMemoryScanRepository();
-        var nmap = new FakeNmapRunner { Available = true };
+        var nmap = new FakeNmapRunner { Available = false };
         var scan = await SeedQueuedScanAsync(scans, _authTargetId);
-        nmap = new FakeNmapRunner { Available = false };
         Assert.False((await CreateSut(scans, nmap).StartAsync(scan.Id)).Succeeded);
         Assert.Equal(0, nmap.RunCallCount);
         Assert.Equal(ScanStatus.Failed, (await scans.GetByIdAsync(scan.Id))!.Status);
@@ -207,17 +204,15 @@ public class ScanExecutionServiceTests
         var nmap = new FakeNmapRunner { Available = true };
         var tracker = new FakeScanProcessTracker();
         var scan = await SeedQueuedScanAsync(scans, _authTargetId);
-        tracker.ForceRegister(scan.Id);
-        var result = await CreateSut(scans, nmap, tracker: tracker).StartAsync(scan.Id);
-        Assert.False(result.Succeeded);
+        tracker.PreRegister(scan.Id);
+        Assert.False((await CreateSut(scans, nmap, tracker: tracker).StartAsync(scan.Id)).Succeeded);
         Assert.Equal(0, nmap.RunCallCount);
     }
 
     [Fact]
     public void RequestCancel_WhenNotRegistered_ReturnsFalse()
     {
-        var sut = CreateSut(tracker: new FakeScanProcessTracker());
-        Assert.False(sut.RequestCancel(Guid.NewGuid()));
+        Assert.False(CreateSut().RequestCancel(Guid.NewGuid()));
     }
 
     [Fact]
@@ -225,9 +220,8 @@ public class ScanExecutionServiceTests
     {
         var tracker = new FakeScanProcessTracker();
         var id = Guid.NewGuid();
-        tracker.ForceRegister(id);
-        var sut = CreateSut(tracker: tracker);
-        Assert.True(sut.RequestCancel(id));
+        tracker.PreRegister(id);
+        Assert.True(CreateSut(tracker: tracker).RequestCancel(id));
     }
 
     [Fact]
@@ -267,8 +261,8 @@ public class ScanExecutionServiceTests
         public Task<NmapAvailabilityResult> CheckAvailabilityAsync(CancellationToken cancellationToken = default)
         {
             if (!Available)
-                return Task.FromResult(NmapAvailabilityResult.Unavailable("Nmap not found"));
-            return Task.FromResult(NmapAvailabilityResult.Available("C:\\nmap\\nmap.exe", VersionText ?? "Nmap 7.94"));
+                return Task.FromResult(NmapAvailabilityResult.Unavailable("Nmap not found (fake)."));
+            return Task.FromResult(NmapAvailabilityResult.Available(@"C:\Program Files\Nmap\nmap.exe", VersionText));
         }
 
         public Task<NmapRunResult> RunAsync(NmapRunRequest request, CancellationToken cancellationToken = default)
@@ -276,28 +270,31 @@ public class ScanExecutionServiceTests
             RunCallCount++;
             LastRequest = request;
             if (FailStartup)
-                return Task.FromResult(NmapRunResult.NotStarted("start failed"));
+                return Task.FromResult(NmapRunResult.StartupFailure("start failed (fake)"));
             if (SimulateCancel)
-                return Task.FromResult(NmapRunResult.WasCancelled(request.XmlOutputPath));
-            if (ExitCode != 0)
-                return Task.FromResult(NmapRunResult.Finished(ExitCode, "", Stderr, request.XmlOutputPath, TimeSpan.FromSeconds(1)));
-            return Task.FromResult(NmapRunResult.Finished(0, "", "", request.XmlOutputPath, TimeSpan.FromSeconds(1)));
+                return Task.FromResult(NmapRunResult.FromProcess(-1, "", "", TimeSpan.FromMilliseconds(10), cancelled: true, request.XmlOutputPath));
+            return Task.FromResult(NmapRunResult.FromProcess(ExitCode, "ok", Stderr, TimeSpan.FromMilliseconds(5), false, request.XmlOutputPath));
         }
     }
 
     private sealed class FakeScanProcessTracker : IScanProcessTracker
     {
-        private readonly HashSet<Guid> _registered = new();
-        public void ForceRegister(Guid id) => _registered.Add(id);
-        public bool TryRegister(Guid scanId, CancellationTokenSource cts)
+        private readonly Dictionary<Guid, CancellationTokenSource> _map = new();
+        public void PreRegister(Guid id) => _map[id] = new CancellationTokenSource();
+        public bool TryRegister(Guid scanId, CancellationTokenSource linkedCts)
         {
-            if (_registered.Contains(scanId)) return false;
-            _registered.Add(scanId);
+            if (_map.ContainsKey(scanId)) return false;
+            _map[scanId] = linkedCts;
             return true;
         }
-        public void Unregister(Guid scanId) => _registered.Remove(scanId);
-        public bool IsRegistered(Guid scanId) => _registered.Contains(scanId);
-        public bool TryCancel(Guid scanId) => _registered.Contains(scanId);
+        public bool TryCancel(Guid scanId)
+        {
+            if (!_map.TryGetValue(scanId, out var cts)) return false;
+            cts.Cancel();
+            return true;
+        }
+        public void Unregister(Guid scanId) => _map.Remove(scanId);
+        public bool IsRegistered(Guid scanId) => _map.ContainsKey(scanId);
     }
 
     private sealed class FakeScanOutputPathService : IScanOutputPathService
