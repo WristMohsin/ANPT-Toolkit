@@ -15,7 +15,7 @@ ANPT Toolkit is a Senior Design / Final Year Project that provides a modern, pro
 > **Security Notice**  
 > This toolkit is intended **only** for systems you own or have explicit written authorization to assess. Unauthorized scanning is illegal.
 
-## Current Status — Phase 5D (Parsed Results Persistence)
+## Current Status — Phase 5F (Findings Enrichment)
 
 | Component | Status |
 |-----------|--------|
@@ -27,8 +27,10 @@ ANPT Toolkit is a Senior Design / Final Year Project that provides a modern, pro
 | Phase 5B real execution & lifecycle | Done |
 | Phase 5C Nmap XML parsing foundation | Done |
 | Phase 5D parsed results persistence | Done |
-| Findings / vulnerabilities / CVE | Not started |
-| Reporting | Not started |
+| Phase 5E security analysis / findings foundation | Done |
+| Phase 5F finding enrichment, risk context, reporting foundation | Done |
+| CVE enrichment / exploit verification | Not started |
+| Advanced PDF reporting | Not started |
 
 ### Targets (Phase 3)
 
@@ -58,19 +60,27 @@ ANPT Toolkit is a Senior Design / Final Year Project that provides a modern, pro
 - Secure **Nmap XML parser** (`INmapXmlParser`) using `System.Xml.Linq` with DTD/external entity resolution **disabled**.
 - Typed in-memory models: scan metadata, hosts, addresses, hostnames, ports, services, runstats.
 - Controlled **XML file reader** (`INmapXmlResultReader`) restricted to the application `ScanOutput/` directory.
-- Unit tests cover valid fixtures, missing optional fields, malformed XML, XXE/DTD attempts, and path traversal rejection.
 
 ### Persistence (Phase 5D)
 
 - End-to-end after exit code 0: **XML → INmapXmlResultReader → INmapXmlParser → INmapResultPersistenceService → SQLite**.
-- **Transactional** persistence under the owning Scan (`INmapResultPersistenceService`).
+- **Transactional** persistence under the owning Scan.
 - Relationships: `Scan → Host → Address / Hostname / Service (port)`.
 - Hosts support IPv4, IPv6, MAC, and multiple hostnames; ports may exist without service details.
-- **Reprocessing** replaces prior result rows for that Scan only (no uncontrolled duplicates).
-- Scan-level Nmap metadata stored on the Scan row (scanner, version, args, elapsed, summary, exit).
-- Parse/persist failures leave the scan **Completed** (Nmap succeeded) but set a clear StatusMessage that results were not stored.
+- **Reprocessing** replaces prior result rows for that Scan only.
 
-**Still NOT implemented:** Findings, Vulnerability Analysis, CVE matching, Reporting, Scheduling, Hosts/Services UI.
+### Findings & Analysis (Phase 5E–5F)
+
+- Deterministic analysis rules on **persisted** Nmap data only (no re-scanning, no network I/O from rules).
+- Rules: `OPEN-SERVICE-EXPOSURE`, `SERVICE-WITHOUT-IDENTIFICATION`, `SENSITIVE-SERVICE-EXPOSURE`.
+- Findings include title, description, evidence, impact, recommendation, RuleId, severity, and status.
+- **Risk context**: priority and risk label derived deterministically from severity (no fake CVSS/CVE).
+- Findings UI: search, severity/status/rule filters, professional details window, dashboard summary counts.
+- Scan details shows per-scan finding summary; **assessment report** read model (`AssessmentReport`) for future reporting.
+- Analysis is **idempotent** and restricted to **Completed** scans.
+- Explicit **Analyze** action on Scans view.
+
+**Still NOT implemented:** CVE enrichment, exploit verification, credential attacks, brute force, destructive testing, advanced PDF reporting, scheduling, Hosts/Services management UI.
 
 ## Technology Stack
 
